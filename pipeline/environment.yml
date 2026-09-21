@@ -1,0 +1,22 @@
+name: vcc2026
+channels:
+  - conda-forge
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - scipy
+  - scanpy
+  - anndata
+  - h5py
+  - pip
+  - pip:
+      # CPU-only PyTorch build -- avoids pulling CUDA dependencies
+      # you don't need on a CPU-only machine.
+      - --extra-index-url https://download.pytorch.org/whl/cpu
+      - torch
+      - cell-gears           # GEARS
+      - arc-state             # STATE (SE + ST) -- Arc Institute
+      - arc-stack              # Stack -- Arc Institute in-context model
