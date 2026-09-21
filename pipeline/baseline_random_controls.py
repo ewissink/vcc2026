@@ -29,10 +29,14 @@ Expected inputs:
     --controls-dir: one .h5ad per cell type, named <cell_type>.h5ad,
         each containing only that context's control (non-targeting)
         cells, raw counts in .X, genes in .var_names.
-    --targets-csv: two columns, cell_type,perturbation -- the full
-        list of (context, gene) pairs the submission must cover.
-        This is the manifest the challenge provides; adjust the
-        column names below if yours differ.
+    --targets-csv: EITHER
+        (a) a flat gene list with a single `target_gene` column --
+            the script will cross it with every cell type found in
+            controls_dir, since the task is to predict each gene's
+            impact in all contexts; OR
+        (b) two columns, cell_type,perturbation -- pre-paired rows,
+            used as-is.
+        Adjust --gene-col / column names below if yours differ.
 """
 
 from __future__ import annotations
@@ -83,14 +87,42 @@ def build_baseline_submission(
     seed: int,
     cell_type_col: str = "cell_type",
     pert_col: str = "perturbation",
+    gene_col: str = "target_gene",
 ) -> Path:
     pools = load_control_pools(controls_dir)
-    targets = pd.read_csv(targets_csv)
+    targets_raw = pd.read_csv(targets_csv)
+
+    if cell_type_col in targets_raw.columns:
+        # Already paired (cell_type, perturbation) rows.
+        targets = targets_raw.rename(columns={gene_col: pert_col}) \
+            if gene_col in targets_raw.columns and pert_col not in targets_raw.columns \
+            else targets_raw
+    else:
+        # Flat gene list (e.g. a single `target_gene` column): cross with
+        # every cell type found in controls_dir, since the task is to
+        # predict each gene's impact in all contexts, not a pre-paired
+        # subset. This is the common VCC shape -- one target-gene list,
+        # applied identically across the validation/test cell lines.
+        if gene_col not in targets_raw.columns:
+            raise ValueError(
+                f"targets_csv has neither '{cell_type_col}' nor '{gene_col}' column -- "
+                f"got columns: {list(targets_raw.columns)}"
+            )
+        genes = targets_raw[gene_col].unique()
+        cell_types = sorted(pools.keys())
+        targets = pd.DataFrame(
+            [(ct, g) for ct in cell_types for g in genes],
+            columns=[cell_type_col, pert_col],
+        )
+        print(
+            f"Expanded {len(genes)} genes x {len(cell_types)} cell types "
+            f"({list(cell_types)}) -> {len(targets)} (cell_type, perturbation) pairs"
+        )
 
     missing_types = set(targets[cell_type_col]) - set(pools.keys())
     if missing_types:
         raise ValueError(
-            f"targets_csv references cell types with no control file: {missing_types}"
+            f"targets reference cell types with no control file: {missing_types}"
         )
 
     rng = np.random.default_rng(seed)
@@ -147,6 +179,8 @@ if __name__ == "__main__":
     parser.add_argument("--out", type=Path, default=Path("submission_baseline.h5ad"))
     parser.add_argument("--n-cells", type=int, default=400)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--gene-col", type=str, default="target_gene",
+                         help="Column name in targets_csv for a flat gene list (ignored if the CSV already has a cell_type column)")
     args = parser.parse_args()
 
     build_baseline_submission(
@@ -155,4 +189,5 @@ if __name__ == "__main__":
         out_path=args.out,
         n_cells=args.n_cells,
         seed=args.seed,
+        gene_col=args.gene_col,
     )
