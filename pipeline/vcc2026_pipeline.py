@@ -522,7 +522,15 @@ def assemble_submission(
             all_gene.extend([gene] * cfg.n_cells_per_pert)
 
     X = np.vstack(all_X)
-    obs = pd.DataFrame({"context": all_context, "gene": all_gene})
+    # Column names/values confirmed against the real `vcc prep` CLI:
+    # 'context' (not 'cell_type' or 'context' guessed loosely) and
+    # 'target_gene'. Critically, the VALUES in the context column must
+    # be exactly the labels used in the downloaded control files (e.g.
+    # 'A'/'B'/'C') -- not a filename-derived string like 'context_A'.
+    # `all_context` here should already carry those exact labels if it
+    # was built from control_cells_by_context keyed the same way
+    # baseline_random_controls.py's load_control_pools reads them.
+    obs = pd.DataFrame({"context": all_context, "target_gene": all_gene})
     adata_out = sc.AnnData(X=X, obs=obs, var=pd.DataFrame(index=gene_names))
     adata_out.write_h5ad(out_path)
 

@@ -72,7 +72,7 @@ def make_gears_predict_fn(cfg: PipelineConfig, context_key: str = "cell_type"):
 
 
 def make_state_predict_fn(model_dir: str, checkpoint: str, control_adata_path: str,
-                           pert_col: str = "gene", tmp_output: str = "state_tmp_preds.h5ad"):
+                           pert_col: str = "target_gene", tmp_output: str = "state_tmp_preds.h5ad"):
     """
     Runs STATE's ST module via inference only (pretrained checkpoint,
     no fine-tuning) on the training split's control cells, one call
@@ -101,7 +101,7 @@ def make_state_predict_fn(model_dir: str, checkpoint: str, control_adata_path: s
 
 
 def make_stack_predict_fn(model_dir: str, control_adata_path: str,
-                           pert_col: str = "gene", tmp_output: str = "stack_tmp_preds.h5ad"):
+                           pert_col: str = "target_gene", tmp_output: str = "stack_tmp_preds.h5ad"):
     """
     Stack's whole design point is in-context prediction with no
     fine-tuning: feed it the training split's control cells as context
