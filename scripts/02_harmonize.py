@@ -102,7 +102,7 @@ def main():
     np.savez_compressed(
         out / f"{args.name}.npz",
         perts=np.array(names), delta=np.vstack(deltas), n_cells=np.array(ncells),
-        ctrl_mean=ctrl_mean, covered=covered, genes=genes.values,
+        ctrl_mean=ctrl_mean, covered=covered, genes=genes.values.astype(str),
         cell_line=args.cell_line, n_ctrl=int(is_ctrl.sum()),
     )
     print(f"{args.name}: {len(names)} perturbations kept (>= {args.min_cells} cells)")

@@ -44,7 +44,9 @@ from scipy.stats import rankdata
 def load_datasets(d):
     out = {}
     for f in sorted(Path(d).glob("*.npz")):
-        z = np.load(f, allow_pickle=False)
+        # allow_pickle: older 02_harmonize outputs stored `genes` as an object array.
+        # These are our own files, not downloads.
+        z = np.load(f, allow_pickle=True)
         out[f.stem] = dict(
             perts=z["perts"].astype(str), delta=z["delta"], n=z["n_cells"].astype(float),
             covered=z["covered"], genes=z["genes"].astype(str), cell_line=str(z["cell_line"]),
