@@ -45,6 +45,7 @@ import argparse
 from pathlib import Path
 
 import numpy as np
+import scipy.sparse as sp
 import pandas as pd
 import scanpy as sc
 
@@ -109,8 +110,8 @@ def sample_baseline_population(
     idx = rng.choice(n_available, size=n_cells, replace=replace)
 
     X = control_adata.X
-    sampled = X[idx].toarray() if hasattr(X, "toarray") else np.asarray(X[idx])
-    return sampled
+    # Keep sparse: the full baseline (360,000 cells x 18,533 genes) is far too big dense.
+    return sp.csr_matrix(X[idx])
 
 
 def build_baseline_submission(
@@ -183,8 +184,9 @@ def build_baseline_submission(
         all_context.extend([context] * n_cells)
         all_pert.extend([pert] * n_cells)
 
-    X = np.vstack(all_X)
-    X = np.rint(X).astype(int)  # enforce raw integer counts
+    X = sp.vstack(all_X, format="csr")
+    X.data = np.rint(X.data).astype(np.int32)  # enforce raw integer counts
+    X.eliminate_zeros()
 
     # Column names confirmed against the real `vcc prep` CLI: 'context'
     # (not 'cell_type') and 'target_gene', with context VALUES that must
@@ -195,7 +197,7 @@ def build_baseline_submission(
 
     # Spec sanity checks before writing -- catch mistakes here, not at
     # submission time.
-    assert (X >= 0).all(), "counts must be non-negative"
+    assert X.nnz == 0 or X.data.min() >= 0, "counts must be non-negative"
     assert X.shape[0] == n_cells * len(targets), "unexpected total cell count"
     expected_per_group = targets.groupby([context_col, pert_col]).size()
     assert (expected_per_group == 1).all(), (

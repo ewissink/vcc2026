@@ -1,0 +1,39 @@
+# Public CRISPRi / Perturb-seq sources for zero-shot training.
+# status: "unverified" = found by web search, file format/columns not yet confirmed.
+# Fill in pert_col / control_label / gene_col after inspecting each file on BioHPC.
+datasets:
+  replogle_k562_essential:
+    cell_line: K562
+    how: pertpy.data.replogle_2022_k562_essential()   # scPerturb-prepared AnnData
+    paper: "Replogle et al. 2022, Cell, doi:10.1016/j.cell.2022.05.013"
+    status: unverified
+    pert_col: gene            # check
+    control_label: non-targeting
+  replogle_k562_gwps:
+    cell_line: K562
+    how: pertpy.data.replogle_2022_k562_gwps()
+    paper: same
+    status: unverified
+    pert_col: gene
+    control_label: non-targeting
+  replogle_rpe1:
+    cell_line: RPE1
+    how: "not confirmed in pertpy; Replogle 2022 also released RPE1 (essential). Find the h5ad (scPerturb/Zenodo/Figshare)."
+    status: needs_source
+  nadig_hepg2_jurkat:
+    cell_line: HepG2, Jurkat   # not confirmed from search; verify in the paper
+    how: "see Data Availability of Nadig et al. 2025 (bioRxiv 10.1101/2024.07.03.601903)"
+    status: needs_source
+  arc_vcc2025_h1:
+    cell_line: H1_hESC
+    how: "Arc Virtual Cell Atlas: https://arcinstitute.org/tools/virtualcellatlas (full 2025 set incl. val/test perturbations)"
+    status: unverified
+    chemistry: 10x Flex
+    pert_col: target_gene
+    control_label: non-targeting
+  xatlas_orion:
+    cell_line: HCT116, HEK293T
+    how: "figshare DOI 10.25452/figshare.plus.29190726 (~520 GB total; take a subset)"
+    paper: "bioRxiv 10.1101/2025.06.11.659105"
+    status: unverified
+    note: "Flex chemistry NOT confirmed; check methods."
