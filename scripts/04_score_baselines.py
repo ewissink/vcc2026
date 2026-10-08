@@ -25,6 +25,8 @@ Methods:
   train_mean      mean delta over the training perturbations
   oracle_mean     mean measured delta of the panel (the official 'mean-response' baseline b;
                   uses held-out truth, so it is a reference point, not a submittable method)
+  transfer_topn   donor delta with only the --sparsify-n strongest genes kept (no scaling);
+                  tests whether donor noise on weak genes, not scale, drives the error
   transfer_scaled_other  alpha * donor delta (no-change without a donor); alpha fit on the other
                   folds' tuning perts. Biased with only two lines (reverse direction).
   transfer_scaled_self   same, alpha fit on this fold's own tuning perts: optimistic ceiling for
@@ -169,6 +171,8 @@ def main():
                     help="keep only perts whose measured effect norm (own target gene excluded) is "
                          "above this quantile of the pool; the Challenge panel is presumably "
                          "enriched for measurable effects, so try 0.8")
+    ap.add_argument("--sparsify-n", type=int, default=200,
+                    help="transfer_topn keeps this many strongest donor genes per perturbation")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default=None, help="optional CSV of per-panel results")
     args = ap.parse_args()
@@ -234,6 +238,11 @@ def main():
         }
         donor = np.vstack([t_delta[t_index[g]] if g in t_index else np.zeros_like(train_mean)
                            for g in panel])[:, cols]    # no-change if no donor
+        topn = np.zeros_like(donor)                  # keep strongest N donor genes, zero the rest
+        k_ = min(args.sparsify_n, donor.shape[1])
+        idx = np.argpartition(-np.abs(donor), k_ - 1, axis=1)[:, :k_]
+        np.put_along_axis(topn, idx, np.take_along_axis(donor, idx, axis=1), axis=1)
+        preds["transfer_topn"] = topn
         for name, a_ in (("transfer_scaled_other", alpha_other), ("transfer_scaled_self", alpha_self)):
             if a_ is not None:
                 preds[name] = a_ * donor
