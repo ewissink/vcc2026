@@ -1,0 +1,16 @@
+name: vcc2026
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  - numpy
+  - scipy
+  - pandas
+  - anndata
+  - scanpy
+  - pyyaml
+  - pip
+  - pip:
+      - arc-state        # State (pretrained embedding / transition); verify install on BioHPC
+      # cell-eval2 and the `vcc` CLI: install per ArcInstitute/cell-eval2 README
