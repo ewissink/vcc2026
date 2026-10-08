@@ -18,12 +18,15 @@ datasets:
     control_label: non-targeting
   replogle_rpe1:
     cell_line: RPE1
-    how: "not confirmed in pertpy; Replogle 2022 also released RPE1 (essential). Find the h5ad (scPerturb/Zenodo/Figshare)."
-    status: needs_source
-  nadig_hepg2_jurkat:
-    cell_line: HepG2, Jurkat   # not confirmed from search; verify in the paper
-    how: "see Data Availability of Nadig et al. 2025 (bioRxiv 10.1101/2024.07.03.601903)"
-    status: needs_source
+    how: pertpy.data.replogle_2022_rpe1()   # also in scPerturb Zenodo (record 13350497, v1.4, 43 GB total)
+    status: unverified
+    pert_col: gene            # check
+    control_label: non-targeting
+  nadig_hepg2_jurkat:      # split into two entries once downloaded (one per cell line)
+    cell_line: HepG2, Jurkat
+    how: "GEO GSE264667 (accession from a secondary source -- verify on GEO); Nature Genetics doi:10.1038/s41588-025-02169-3"
+    status: unverified
+    note: "Essential-gene CRISPRi screens only (~2,393 perts each), not genome-wide. Jurkat is likely validation context A."
   arc_vcc2025_h1:
     cell_line: H1_hESC
     how: "Arc Virtual Cell Atlas: https://arcinstitute.org/tools/virtualcellatlas (full 2025 set incl. val/test perturbations)"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Step 1a: fetch the public datasets that can be fetched programmatically.
 
-Only the Replogle K562 sets go through pertpy (scPerturb-prepared AnnData). The rest
+Only the Replogle K562/RPE1 sets go through pertpy (scPerturb-prepared AnnData). The rest
 need manual download; see config/datasets.yaml.
 
 Usage:
@@ -15,7 +15,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--out", required=True)
     p.add_argument("--which", nargs="+", default=["k562_essential"],
-                   choices=["k562_essential", "k562_gwps"])
+                   choices=["k562_essential", "k562_gwps", "rpe1"])
     args = p.parse_args()
 
     import pertpy as pt  # pip install pertpy
@@ -25,6 +25,7 @@ def main():
     loaders = {
         "k562_essential": pt.data.replogle_2022_k562_essential,
         "k562_gwps": pt.data.replogle_2022_k562_gwps,
+        "rpe1": pt.data.replogle_2022_rpe1,
     }
     for name in args.which:
         print(f"fetching {name} ...")
