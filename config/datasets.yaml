@@ -4,21 +4,21 @@
 datasets:
   replogle_k562_essential:
     cell_line: K562
-    how: pertpy.data.replogle_2022_k562_essential()   # scPerturb-prepared AnnData
+    how: "Zenodo 13350497 ReplogleWeissman2022_K562_essential.h5ad (scripts/01_fetch_public.py)"
     paper: "Replogle et al. 2022, Cell, doi:10.1016/j.cell.2022.05.013"
     status: unverified
     pert_col: gene            # check
     control_label: non-targeting
   replogle_k562_gwps:
     cell_line: K562
-    how: pertpy.data.replogle_2022_k562_gwps()
+    how: "Zenodo 13350497 ReplogleWeissman2022_K562_gwps.h5ad (8.8 GB)"
     paper: same
     status: unverified
     pert_col: gene
     control_label: non-targeting
   replogle_rpe1:
     cell_line: RPE1
-    how: pertpy.data.replogle_2022_rpe1()   # also in scPerturb Zenodo (record 13350497, v1.4, 43 GB total)
+    how: "Zenodo 13350497 ReplogleWeissman2022_rpe1.h5ad"
     status: unverified
     pert_col: gene            # check
     control_label: non-targeting
