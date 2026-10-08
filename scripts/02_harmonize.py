@@ -39,6 +39,7 @@ def main():
     p.add_argument("--control-label", required=True)
     p.add_argument("--gene-col", default=None, help="var column with symbols; default var_names")
     p.add_argument("--min-cells", type=int, default=20)
+    p.add_argument("--chunk", type=int, default=50000, help="cells per chunk")
     p.add_argument("--out", required=True)
     args = p.parse_args()
 
@@ -48,7 +49,8 @@ def main():
     genes = genes.reset_index(drop=True)
     gidx = {g: i for i, g in enumerate(genes)}
 
-    a = ad.read_h5ad(args.h5ad)
+    # Backed + chunked: the genome-wide files are ~2M cells and do not fit in RAM as float64.
+    a = ad.read_h5ad(args.h5ad, backed="r")
     src = a.var[args.gene_col].astype(str).values if args.gene_col else a.var_names.astype(str).values
     # keep first occurrence of duplicated symbols
     src_to_target, seen = [], set()
@@ -56,30 +58,44 @@ def main():
         if g in gidx and g not in seen:
             seen.add(g)
             src_to_target.append((j, gidx[g]))
-    src_cols = np.array([s for s, _ in src_to_target])
+    src_cols = np.array([s_ for s_, _ in src_to_target])
     tgt_cols = np.array([t for _, t in src_to_target])
     covered = np.zeros(len(genes), dtype=bool)
     covered[tgt_cols] = True
     print(f"{len(tgt_cols)}/{len(genes)} challenge genes present in source")
 
-    Xn = log1p_cpm(a.X)[:, src_cols]
     pert = a.obs[args.pert_col].astype(str).values
-    is_ctrl = pert == args.control_label
-    if is_ctrl.sum() == 0:
+    if not (pert == args.control_label).any():
         raise SystemExit(f"no cells with {args.pert_col} == {args.control_label!r}")
-    ctrl_mean = np.zeros(len(genes), dtype=np.float32)
-    ctrl_mean[tgt_cols] = np.asarray(Xn[is_ctrl].mean(axis=0)).ravel()
+    labels = pd.Index(pd.unique(pert))              # control included
+    code = labels.get_indexer(pert)
+    n_lab = len(labels)
+    sums = np.zeros((n_lab, len(src_cols)), dtype=np.float64)
+    n_cells_lab = np.bincount(code, minlength=n_lab)
 
-    df = pd.Series(np.arange(a.n_obs)).groupby(pert).apply(list)
+    for lo in range(0, a.n_obs, args.chunk):
+        hi = min(lo + args.chunk, a.n_obs)
+        Xn = log1p_cpm(a.X[lo:hi])[:, src_cols]
+        G = sp.csr_matrix((np.ones(hi - lo), (code[lo:hi], np.arange(hi - lo))), shape=(n_lab, hi - lo))
+        sums += np.asarray((G @ Xn).todense())
+        print(f"  cells {hi}/{a.n_obs}", flush=True)
+
+    means = sums / np.maximum(n_cells_lab, 1)[:, None]
+    ci = labels.get_loc(args.control_label)
+    ctrl_mean = np.zeros(len(genes), dtype=np.float32)
+    ctrl_mean[tgt_cols] = means[ci]
+
     names, deltas, ncells = [], [], []
-    for g, idx in df.items():
-        if g == args.control_label or len(idx) < args.min_cells:
+    for i, g in enumerate(labels):
+        if i == ci or n_cells_lab[i] < args.min_cells:
             continue
         d = np.zeros(len(genes), dtype=np.float32)
-        d[tgt_cols] = np.asarray(Xn[idx].mean(axis=0)).ravel() - ctrl_mean[tgt_cols]
+        d[tgt_cols] = means[i] - means[ci]
         names.append(g)
         deltas.append(d)
-        ncells.append(len(idx))
+        ncells.append(int(n_cells_lab[i]))
+    is_ctrl = np.zeros(a.n_obs, dtype=bool)
+    is_ctrl[code == ci] = True
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
