@@ -25,6 +25,10 @@ Methods:
   train_mean      mean delta over the training perturbations
   oracle_mean     mean measured delta of the panel (the official 'mean-response' baseline b;
                   uses held-out truth, so it is a reference point, not a submittable method)
+  transfer_scaled_other  alpha * donor delta (no-change without a donor); alpha fit on the other
+                  folds' tuning perts. Biased with only two lines (reverse direction).
+  transfer_scaled_self   same, alpha fit on this fold's own tuning perts: optimistic ceiling for
+                  scalar calibration, not valid zero-shot.
   transfer        the same gene's delta from the training line(s), n_cells-weighted;
                   falls back to train_mean when the gene was not perturbed in training
 
@@ -122,6 +126,36 @@ def score_panel(pred, meas, tgt_idx, top_k):
                 dir_reach=np.mean(reach), sig_jaccard=np.mean(jac), lfc_nmae=np.mean(nmae))
 
 
+def fit_alpha(dsets, splits, lines, gidx, q):
+    """Least-squares scale for transferred deltas on the tuning (val) perts of the given
+    folds: alpha = <P, M> / <P, P>, P = donor delta, M = measured."""
+    num = den = 0.0
+    for line, fold in splits.items():
+        if line not in lines:
+            continue
+        h_perts, h_delta, h_cov = merge(dsets, fold["held_out_datasets"])
+        t_perts, t_delta, _ = merge(dsets, fold["train_datasets"])
+        t_index = {g: i for i, g in enumerate(t_perts)}
+        h_index = {g: i for i, g in enumerate(h_perts)}
+        pool = [g for g in fold["val_perts"] if g in t_index and g in h_index]
+        if not pool:
+            continue
+        cols = np.where(h_cov)[0]
+        col_of = {c: j for j, c in enumerate(cols)}
+        M = np.vstack([h_delta[h_index[g]] for g in pool])[:, cols].astype(np.float64)
+        P = np.vstack([t_delta[t_index[g]] for g in pool])[:, cols].astype(np.float64)
+        for i, g in enumerate(pool):                 # drop each pert's own target gene
+            if g in gidx and gidx[g] in col_of:
+                M[i, col_of[gidx[g]]] = P[i, col_of[gidx[g]]] = 0.0
+        if q > 0:
+            nrm = np.linalg.norm(M, axis=1)
+            keep = nrm >= np.quantile(nrm, q)
+            M, P = M[keep], P[keep]
+        num += float((P * M).sum())
+        den += float((P * P).sum())
+    return num / den if den > 0 else None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--harmonized", required=True)
@@ -174,6 +208,16 @@ def main():
     if size < 20:
         raise SystemExit("too few perturbations for a meaningful panel")
 
+    all_splits = json.loads(Path(args.splits).read_text())
+    # 'other': fit on the reverse-direction folds. With only two lines this is the reciprocal
+    # of the right scale, so it is biased; it becomes meaningful with 3+ lines.
+    alpha_other = fit_alpha(dsets, all_splits, [l for l in all_splits if l != args.fold],
+                            gidx, args.effect_quantile)
+    # 'self': fit on this fold's own tuning perts. Uses target-line truth, so NOT a valid
+    # zero-shot method; it shows how much a perfect scalar calibration would buy.
+    alpha_self = fit_alpha(dsets, all_splits, [args.fold], gidx, args.effect_quantile)
+    print(f"transfer scale: alpha_other={alpha_other}  alpha_self={alpha_self}")
+
     rng = np.random.default_rng(args.seed)
     rows = []
     for panel_i in range(args.n_panels):
@@ -188,6 +232,11 @@ def main():
             "transfer": np.vstack([t_delta[t_index[g]] if g in t_index else train_mean
                                    for g in panel])[:, cols],
         }
+        donor = np.vstack([t_delta[t_index[g]] if g in t_index else np.zeros_like(train_mean)
+                           for g in panel])[:, cols]    # no-change if no donor
+        for name, a_ in (("transfer_scaled_other", alpha_other), ("transfer_scaled_self", alpha_self)):
+            if a_ is not None:
+                preds[name] = a_ * donor
         for name, P in preds.items():
             rows.append(dict(panel=panel_i, method=name, **score_panel(P, meas, tgt, args.top_k)))
 
