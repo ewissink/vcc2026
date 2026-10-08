@@ -131,6 +131,10 @@ def main():
     ap.add_argument("--panel-size", type=int, default=300)
     ap.add_argument("--n-panels", type=int, default=20)
     ap.add_argument("--top-k", type=int, default=100)
+    ap.add_argument("--effect-quantile", type=float, default=0.0,
+                    help="keep only perts whose measured effect norm (own target gene excluded) is "
+                         "above this quantile of the pool; the Challenge panel is presumably "
+                         "enriched for measurable effects, so try 0.8")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out", default=None, help="optional CSV of per-panel results")
     args = ap.parse_args()
@@ -152,14 +156,24 @@ def main():
     elif args.stratum == "seen":
         pool = pool[in_train]
     pool = np.array([g for g in pool if g in set(h_perts)])
+    cols = np.where(h_cov)[0]
+    h_index = {g: i for i, g in enumerate(h_perts)}
+    if args.effect_quantile > 0:
+        col_of = {c: j for j, c in enumerate(cols)}
+        eff = []
+        for g in pool:
+            v = h_delta[h_index[g]][cols].copy()
+            if g in gidx and gidx[g] in col_of:
+                v[col_of[gidx[g]]] = 0.0
+            eff.append(np.linalg.norm(v))
+        eff = np.array(eff)
+        pool = pool[eff >= np.quantile(eff, args.effect_quantile)]
     size = min(args.panel_size, len(pool))
     print(f"fold {args.fold}, stratum {args.stratum}: {len(pool)} candidate perts, "
           f"panel size {size}, {int(h_cov.sum())} covered genes")
     if size < 20:
         raise SystemExit("too few perturbations for a meaningful panel")
 
-    cols = np.where(h_cov)[0]
-    h_index = {g: i for i, g in enumerate(h_perts)}
     rng = np.random.default_rng(args.seed)
     rows = []
     for panel_i in range(args.n_panels):
