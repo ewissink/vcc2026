@@ -6,10 +6,12 @@ For each (context, perturbation) row:
   2. effect e_g = lfc_scale * clip(lfc_pred_g, +-lfc-clip) for genes with p_de_g > p-threshold AND
      mean control CPM in that context > min-cpm (the metric only tests such genes, and PIE's
      fold changes on near-unexpressed genes are huge artifacts), else 0;
-  3. down (e<0): binomial thinning of each cell's counts with p = 2^e;
+  3. optionally blend toward the context's mean effect (--shrink) and cap the genes changed
+     per perturbation (--max-genes);
+  4. down (e<0): binomial thinning of each cell's counts with p = 2^e;
      up (e>0): add Poisson(mu_g * (2^e - 1) * cell depth factor), where mu_g is the context's
      mean control count; (multiplying counts cannot create expression from zero);
-  4. genes PIE cannot predict (not on its axis) are left unchanged.
+  5. genes PIE cannot predict (not on its axis) are left unchanged.
 Output: one sparse int32 h5ad with obs [context, target_gene], 18,533 genes in gene_names order,
 checked against the Challenge limits before writing. p-threshold and lfc-scale are placeholders
 that need calibration.
@@ -17,7 +19,8 @@ that need calibration.
 Usage:
     python scripts/09_make_cells.py --pred pred_val_full.parquet --pie-meta $PIE_DATA_ROOT/vcc2026_val/meta.json \
         --data-dir data_dir --pert-counts data_dir/pert_counts.csv --out prediction.h5ad \
-        [--p-threshold 0.5] [--lfc-scale 1.0] [--min-cpm 5] [--lfc-clip 3.0] [--workers 32] [--seed 0] [--n-cells 400]
+        [--p-threshold 0.5] [--lfc-scale 1.0] [--min-cpm 5] [--lfc-clip 3.0]
+        [--shrink 1.0] [--max-genes N] [--workers 32] [--seed 0] [--n-cells 400]
 """
 import argparse
 import json
@@ -41,13 +44,9 @@ def read_genes(path):
 
 
 def make_pop(job):
-    ctx, pert, p_de, lfc, seed = job
+    ctx, pert, e, seed = job
     X, mu, depth = G["X"][ctx], G["mu"][ctx], G["depth"][ctx]
     rng = np.random.default_rng(seed)
-    n_genes = X.shape[1]
-    e = np.zeros(n_genes)
-    sel = (p_de > G["p_thr"]) & G["expr_ok"][ctx]
-    e[G["pie_to_full"][sel]] = G["lfc_scale"] * np.clip(lfc[sel], -G["lfc_clip"], G["lfc_clip"])
     f = 2.0 ** e
     idx = rng.integers(0, X.shape[0], size=G["n_cells"])
     sub = X[idx].tocsr()
@@ -71,6 +70,10 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--p-threshold", type=float, default=0.5)
     ap.add_argument("--lfc-scale", type=float, default=1.0)
+    ap.add_argument("--shrink", type=float, default=1.0,
+                    help="blend toward the context's mean effect: 1 = PIE per-pert, 0 = mean only")
+    ap.add_argument("--max-genes", type=int, default=None,
+                    help="after blending, keep only the N strongest genes per perturbation")
     ap.add_argument("--min-cpm", type=float, default=5.0)
     ap.add_argument("--lfc-clip", type=float, default=3.0, help="clip |log2 fc| (log2 units)")
     ap.add_argument("--n-cells", type=int, default=400)
@@ -84,8 +87,7 @@ def main():
     G["pie_to_full"] = np.array([gidx[g] for g in pie_genes])
     pred = pq.read_table(args.pred).to_pandas()
     pert_order = pd.read_csv(args.pert_counts)["target_gene"].astype(str).tolist()
-    G["p_thr"], G["lfc_scale"], G["n_cells"] = args.p_threshold, args.lfc_scale, args.n_cells
-    G["lfc_clip"] = args.lfc_clip
+    G["n_cells"] = args.n_cells
     print(f"{len(pred)} predictions; PIE axis {len(pie_genes)} / {len(genes)} genes", flush=True)
 
     G["X"], G["mu"], G["depth"], G["expr_ok"] = {}, {}, {}, {}
@@ -107,12 +109,26 @@ def main():
                      for r in pred.itertuples()])
     print(f"genes changed per perturbation after filters: median {int(np.median(nsel))}, "
           f"90th pct {int(np.percentile(nsel, 90))}, max {int(nsel.max())}", flush=True)
+    def effect(ctx, p_de, lfc):
+        e = np.zeros(len(genes))
+        sel = (p_de > args.p_threshold) & G["expr_ok"][ctx]
+        e[G["pie_to_full"][sel]] = args.lfc_scale * np.clip(lfc[sel], -args.lfc_clip, args.lfc_clip)
+        return e
+
     jobs, k = [], 0
     for ctx in sorted(G["X"]):
-        for pert in pert_order:
-            p_de, lfc = lookup[(ctx, pert)]
-            assert len(p_de) == len(pie_genes), "prediction length != PIE gene axis"
-            jobs.append((ctx, pert, p_de, lfc, [args.seed, k]))
+        E = np.vstack([effect(ctx, *lookup[(ctx, pert)]) for pert in pert_order])
+        assert all(len(lookup[(ctx, p)][0]) == len(pie_genes) for p in pert_order)
+        mean_e = E.mean(axis=0)                       # the context's shared response
+        E = mean_e + args.shrink * (E - mean_e)       # shrink=1 keeps PIE; 0 = mean only
+        if args.max_genes:
+            for i in range(E.shape[0]):               # keep the strongest N per perturbation
+                drop = np.argsort(-np.abs(E[i]))[args.max_genes:]
+                E[i, drop] = 0.0
+        print(f"context {ctx}: genes changed per pert after shrink/cap: "
+              f"median {int(np.median((E != 0).sum(1)))}", flush=True)
+        for i, pert in enumerate(pert_order):
+            jobs.append((ctx, pert, E[i], [args.seed, k]))
             k += 1
 
     with mp.get_context("fork").Pool(args.workers) as pool:
