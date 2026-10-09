@@ -3,7 +3,9 @@
 
 For each (context, perturbation) row:
   1. sample --n-cells real control cells from that context (with replacement);
-  2. effect e_g = lfc_scale * lfc_pred_g for genes with p_de_g > p-threshold, else 0;
+  2. effect e_g = lfc_scale * clip(lfc_pred_g, +-lfc-clip) for genes with p_de_g > p-threshold AND
+     mean control CPM in that context > min-cpm (the metric only tests such genes, and PIE's
+     fold changes on near-unexpressed genes are huge artifacts), else 0;
   3. down (e<0): binomial thinning of each cell's counts with p = 2^e;
      up (e>0): add Poisson(mu_g * (2^e - 1) * cell depth factor), where mu_g is the context's
      mean control count; (multiplying counts cannot create expression from zero);
@@ -15,7 +17,7 @@ that need calibration.
 Usage:
     python scripts/09_make_cells.py --pred pred_val_full.parquet --pie-meta $PIE_DATA_ROOT/vcc2026_val/meta.json \
         --data-dir data_dir --pert-counts data_dir/pert_counts.csv --out prediction.h5ad \
-        [--p-threshold 0.5] [--lfc-scale 1.0] [--workers 32] [--seed 0] [--n-cells 400]
+        [--p-threshold 0.5] [--lfc-scale 1.0] [--min-cpm 5] [--lfc-clip 3.0] [--workers 32] [--seed 0] [--n-cells 400]
 """
 import argparse
 import json
@@ -44,8 +46,8 @@ def make_pop(job):
     rng = np.random.default_rng(seed)
     n_genes = X.shape[1]
     e = np.zeros(n_genes)
-    sel = p_de > G["p_thr"]
-    e[G["pie_to_full"][sel]] = G["lfc_scale"] * lfc[sel]
+    sel = (p_de > G["p_thr"]) & G["expr_ok"][ctx]
+    e[G["pie_to_full"][sel]] = G["lfc_scale"] * np.clip(lfc[sel], -G["lfc_clip"], G["lfc_clip"])
     f = 2.0 ** e
     idx = rng.integers(0, X.shape[0], size=G["n_cells"])
     sub = X[idx].tocsr()
@@ -69,6 +71,8 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--p-threshold", type=float, default=0.5)
     ap.add_argument("--lfc-scale", type=float, default=1.0)
+    ap.add_argument("--min-cpm", type=float, default=5.0)
+    ap.add_argument("--lfc-clip", type=float, default=3.0, help="clip |log2 fc| (log2 units)")
     ap.add_argument("--n-cells", type=int, default=400)
     ap.add_argument("--workers", type=int, default=16)
     ap.add_argument("--seed", type=int, default=0)
@@ -81,9 +85,10 @@ def main():
     pred = pq.read_table(args.pred).to_pandas()
     pert_order = pd.read_csv(args.pert_counts)["target_gene"].astype(str).tolist()
     G["p_thr"], G["lfc_scale"], G["n_cells"] = args.p_threshold, args.lfc_scale, args.n_cells
+    G["lfc_clip"] = args.lfc_clip
     print(f"{len(pred)} predictions; PIE axis {len(pie_genes)} / {len(genes)} genes", flush=True)
 
-    G["X"], G["mu"], G["depth"] = {}, {}, {}
+    G["X"], G["mu"], G["depth"], G["expr_ok"] = {}, {}, {}, {}
     for ctx in sorted(pred["context"].unique()):
         a = ad.read_h5ad(Path(args.data_dir) / f"context_{ctx}.h5ad")
         assert list(a.var_names) == genes, f"gene order mismatch in context {ctx}"
@@ -91,9 +96,17 @@ def main():
         G["X"][ctx] = X
         G["mu"][ctx] = np.asarray(X.mean(axis=0)).ravel()
         G["depth"][ctx] = np.asarray(X.sum(axis=1)).ravel().astype(float)
+        cpm = np.asarray((sp.diags(1e6 / np.maximum(G["depth"][ctx], 1)) @ X).mean(axis=0)).ravel()
+        G["expr_ok"][ctx] = (cpm > args.min_cpm)[G["pie_to_full"]]
+        print(f"context {ctx}: {int(G['expr_ok'][ctx].sum())} PIE genes pass min-cpm {args.min_cpm}",
+              flush=True)
 
     lookup = {(r.context, r.perturbation): (np.asarray(r.p_de), np.asarray(r.lfc_pred))
               for r in pred.itertuples()}
+    nsel = np.array([int(((np.asarray(r.p_de) > args.p_threshold) & G["expr_ok"][r.context]).sum())
+                     for r in pred.itertuples()])
+    print(f"genes changed per perturbation after filters: median {int(np.median(nsel))}, "
+          f"90th pct {int(np.percentile(nsel, 90))}, max {int(nsel.max())}", flush=True)
     jobs, k = [], 0
     for ctx in sorted(G["X"]):
         for pert in pert_order:
