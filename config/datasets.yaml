@@ -22,15 +22,28 @@ datasets:
     status: unverified
     pert_col: gene            # check
     control_label: non-targeting
-  nadig_hepg2_jurkat:      # split into two entries once downloaded (one per cell line)
-    cell_line: HepG2, Jurkat
-    how: "GEO GSE264667 (accession from a secondary source -- verify on GEO); Nature Genetics doi:10.1038/s41588-025-02169-3"
-    status: unverified
-    note: "Essential-gene CRISPRi screens only (~2,393 perts each), not genome-wide. Jurkat is likely validation context A."
+  nadig_jurkat:
+    cell_line: Jurkat
+    how: "GEO GSE264667 suppl: GSE264667_jurkat_raw_singlecell_01.h5ad (8.7 GB; ftp.ncbi.nlm.nih.gov/geo/series/GSE264nnn/GSE264667/suppl/)"
+    paper: "Nadig et al. 2025, Nature Genetics, doi:10.1038/s41588-025-02169-3"
+    status: verified_format   # raw integer counts, 262,956 cells x 8,882 genes
+    pert_col: gene
+    control_label: non-targeting
+    gene_col: gene_name       # var_names are Ensembl IDs; symbols are in var['gene_name']
+    note: "Essential-gene screen (~2,393 perts). Jurkat is likely validation context A. Harmonized: 8,284 challenge genes, 2,270 perts."
+  nadig_hepg2:
+    cell_line: HepG2
+    how: "GEO GSE264667 suppl: GSE264667_hepg2_raw_singlecell_01.h5ad (5.2 GB)"
+    paper: same
+    status: harmonized        # same layout assumed and accepted by 02_harmonize.py
+    pert_col: gene
+    control_label: non-targeting
+    gene_col: gene_name
+    note: "Harmonized: 9,024 challenge genes, 2,160 perts. Skip GSE264667_RAW.tar (15 GB)."
   arc_vcc2025_h1:
     cell_line: H1_hESC
-    how: "Arc Virtual Cell Atlas: https://arcinstitute.org/tools/virtualcellatlas (full 2025 set incl. val/test perturbations)"
-    status: unverified
+    how: "gs://arc-institute-virtual-cell-atlas/virtual-cell-challenge/2025/{train,validation,test}/adata_*.h5ad (requester pays; 14.4+6.5+11.1 GB)"
+    status: verified_format   # raw counts, symbols, 18,080 genes; harmonized as h1_train/h1_validation/h1_test
     chemistry: 10x Flex
     pert_col: target_gene
     control_label: non-targeting
