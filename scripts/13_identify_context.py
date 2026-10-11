@@ -16,7 +16,7 @@ File/column names are from memory of recent DepMap releases and not checked agai
 Usage:
     python scripts/13_identify_context.py --expression OmicsExpressionProteinCodingGenesTPMLogp1.csv \
         --model-csv Model.csv --context-means results/00_inspect/context_means.npz \
-        --harmonized results/harmonized [--n-var-genes 5000] [--top 8]
+        --harmonized results/harmonized [--n-var-genes 5000] [--top 8] [--out ranking.csv --save-top 50]
 """
 import argparse
 import re
@@ -43,6 +43,8 @@ def main():
     ap.add_argument("--harmonized", default=None)
     ap.add_argument("--n-var-genes", type=int, default=5000)
     ap.add_argument("--top", type=int, default=8)
+    ap.add_argument("--out", default=None, help="write the ranking to this CSV")
+    ap.add_argument("--save-top", type=int, default=50, help="rows per query saved to --out (0 = all)")
     args = ap.parse_args()
 
     raw = pd.read_csv(args.expression, low_memory=False)
@@ -83,6 +85,7 @@ def main():
                 queries[f"donor {line}"] = (s[z["covered"].astype(bool)], EXPECT[line])
 
     sd = ref.std(axis=0)
+    saved = []
     for qname, (prof, expect) in queries.items():
         common = [g for g in prof.index if g in ref.columns]
         top_genes = sd[common].sort_values(ascending=False).index[: args.n_var_genes]
@@ -93,9 +96,18 @@ def main():
         print(f"\n== {qname}  ({len(top_genes)} genes)")
         for i in order[: args.top]:
             print(f"  {rho[i]:.3f}  {names['name'].iloc[i]:<18} {names['lineage'].iloc[i]}")
+        keep = order if args.save_top == 0 else order[: args.save_top]
+        for rank, i in enumerate(keep, 1):
+            saved.append(dict(query=qname, rank=rank, model_id=ref.index[i], name=names["name"].iloc[i],
+                              lineage=names["lineage"].iloc[i], spearman=float(rho[i]),
+                              n_genes=len(top_genes)))
         if expect:
             hit = [r for r, i in enumerate(order, 1) if expect in str(names["name"].iloc[i]).upper()]
             print(f"  expected '{expect}': " + (f"rank {hit[0]} of {len(order)}" if hit else "not in reference"))
+
+    if args.out:
+        pd.DataFrame(saved).to_csv(args.out, index=False)
+        print(f"\nranking written to {args.out} ({len(saved)} rows)")
 
 
 if __name__ == "__main__":
