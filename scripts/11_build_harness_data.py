@@ -14,7 +14,8 @@ representative as its source: Replogle is 3'-capture, not 10x Flex.
 Usage:
     python scripts/11_build_harness_data.py --h5ad raw/ReplogleWeissman2022_K562_essential.h5ad \
         --harmonized-npz results/harmonized/replogle_k562.npz --gene-names data_dir/gene_names.csv \
-        --name K562 --out harness_K562 [--n-perts 300] [--max-cells 400] [--min-cells 50]
+        --name K562 --out harness_K562 [--n-perts 300] [--max-cells 400] [--min-cells 50] \
+        [--exclude-npz results/harmonized/replogle_k562.npz results/harmonized/replogle_rpe1.npz ...]
 """
 import argparse
 from pathlib import Path
@@ -44,6 +45,14 @@ def main():
     ap.add_argument("--n-perts", type=int, default=300)
     ap.add_argument("--max-cells", type=int, default=400)
     ap.add_argument("--min-cells", type=int, default=50, help="panel perts need at least this many cells")
+    ap.add_argument("--min-target-expr", type=float, default=0.5,
+                    help="a perturbation qualifies only if its target gene's mean log1p-CPM in the "
+                         "source controls exceeds this (the Challenge panel genes are nearly all "
+                         "expressed: 284-300 of 300 above 0.5 in each validation context); 0 disables")
+    ap.add_argument("--exclude-npz", nargs="*", default=[],
+                    help="harmonized .npz files whose perturbations are excluded from the panel; "
+                         "pass the essential-gene screens to mimic the Challenge panel, which "
+                         "avoids them (0/300 overlap with Jurkat/HepG2/RPE1/K562-essential)")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
@@ -53,6 +62,7 @@ def main():
 
     z = np.load(args.harmonized_npz, allow_pickle=True)
     perts, delta, covered = z["perts"].astype(str), z["delta"], z["covered"]
+    ctrl_mean = z["ctrl_mean"].astype(float)
     challenge = read_genes(args.gene_names)
     gidx = {g: i for i, g in enumerate(challenge)}
 
@@ -72,7 +82,17 @@ def main():
     for i, p in enumerate(perts):
         if p in gidx and gidx[p] in set(kept_idx.tolist()):
             eff[i] = np.linalg.norm(np.delete(delta[i, kept_idx], np.where(kept_idx == gidx[p])[0]))
-    ok = np.array([(counts.get(p, 0) >= args.min_cells) and (p in gidx) for p in perts])
+    excluded = set()
+    for f in args.exclude_npz:
+        excluded |= set(np.load(f, allow_pickle=True)["perts"].astype(str).tolist())
+    if excluded:
+        print(f"excluding {len(excluded)} perturbations present in {len(args.exclude_npz)} other screens",
+              flush=True)
+    tgt_expr = np.array([ctrl_mean[gidx[p]] if p in gidx else -1.0 for p in perts])
+    ok = np.array([(counts.get(p, 0) >= args.min_cells) and (p in gidx) and (p not in excluded)
+                   for p in perts]) & (tgt_expr > args.min_target_expr)
+    print(f"{int(ok.sum())} perturbations qualify (>= {args.min_cells} cells, not excluded, target "
+          f"mean log1p-CPM > {args.min_target_expr})", flush=True)
     cand = np.where(ok)[0]
     panel = perts[cand[np.argsort(-eff[cand])][: args.n_perts]]
     print(f"panel: {len(panel)} perts, effect norm {eff[np.isin(perts, panel)].min():.2f}.."
