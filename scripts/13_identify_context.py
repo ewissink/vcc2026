@@ -19,6 +19,7 @@ Usage:
         --harmonized results/harmonized [--n-var-genes 5000] [--top 8]
 """
 import argparse
+import re
 from pathlib import Path
 
 import numpy as np
@@ -44,7 +45,19 @@ def main():
     ap.add_argument("--top", type=int, default=8)
     args = ap.parse_args()
 
-    ref = pd.read_csv(args.expression, index_col=0)
+    raw = pd.read_csv(args.expression, low_memory=False)
+    gene_cols = [c for c in raw.columns if re.match(r".+ \(\w+\)$", str(c))]
+    if not gene_cols:
+        raise SystemExit(f"no 'SYMBOL (id)' gene columns found; columns start: {list(raw.columns[:6])}")
+    meta_cols = [c for c in raw.columns if c not in set(gene_cols)]
+    print(f"expression table: {raw.shape[0]} rows, {len(gene_cols)} gene columns, "
+          f"metadata columns: {meta_cols}", flush=True)
+    # Newer DepMap releases carry several rows per model (sequencing runs): keep the default one.
+    if "IsDefaultEntryForModel" in raw.columns:
+        raw = raw[raw["IsDefaultEntryForModel"].astype(str).str.lower().isin(["yes", "true"])]
+    id_col = "ModelID" if "ModelID" in raw.columns else raw.columns[0]
+    raw = raw.drop_duplicates(subset=id_col).set_index(id_col)
+    ref = raw[gene_cols].apply(pd.to_numeric, errors="coerce")
     ref.columns = [c.split(" (")[0] for c in ref.columns]
     ref = ref.loc[:, ~pd.Index(ref.columns).duplicated()]
     names = pd.DataFrame(index=ref.index)
