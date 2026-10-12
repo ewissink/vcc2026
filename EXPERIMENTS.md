@@ -173,7 +173,22 @@ panel, H1 perts possibly effect-enriched, pseudobulk proxy.
 python scripts/11_build_harness_data.py --h5ad perturb_datasets/ReplogleWeissman2022_K562_gwps.h5ad --harmonized-npz results/harmonized/replogle_k562_gwps.npz --gene-names data_dir/gene_names.csv --name K562 --out harness_K562gw_match --panel-match data_dir/pert_counts.csv --exclude-npz results/harmonized/replogle_k562.npz results/harmonized/replogle_rpe1.npz results/harmonized/nadig_jurkat.npz results/harmonized/nadig_hepg2.npz
 ```
 
-### GWPS split-half on Challenge perts (running)
-Output `split_half_challenge.csv`: per Challenge pert, cells / effect norm / split-half cosine /
-top-200-gene sign agreement, plus 100 control-cell null groups. Key number: how many Challenge
-perts beat the null's 95th percentile of split-half cosine.
+### GWPS split-half on Challenge perts (done 2026-10-12)
+Output `split_half_challenge.csv` (on BioHPC). 272 Challenge perts in GWPS (median 172 cells) vs
+100 control-cell null groups of matched size (median 183):
+
+| | Challenge median | null median |
+|---|---|---|
+| effect norm | 14.9 | 13.5 |
+| split-half cosine | 0.048 | 0.008 |
+| top-200 sign agreement | 0.550 | 0.510 |
+
+- 101/272 Challenge perts beat the null's 95th pct of split-half cosine (0.075); ~14 expected by
+  chance -> roughly 85-90 perts with detectable signal, the rest indistinguishable from noise.
+- Effect norm is barely above a same-size control group: signal ~ sqrt(14.9^2 - 13.5^2) ~ 6.3,
+  i.e. only ~15-20% of each delta's squared norm is signal. GWPS deltas for these perts are
+  mostly sampling noise -- consistent with the low real-panel PDS (raw 0.546) and a reason to
+  denoise (16_denoise_donor.py) and/or shrink each pert by its reliability.
+- Reliability ceiling: Spearman-Brown on the median split cosine gives full-data reliability
+  ~0.09, so even a perfect predictor would correlate only ~0.3 with a GWPS delta. PIE's 0.01 is
+  still far below that.
