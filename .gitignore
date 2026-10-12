@@ -1,0 +1,13 @@
+# data and outputs: keep on BioHPC, not in git
+*.h5ad
+*.npz
+*.vcc
+*.pt
+*.ckpt
+raw/
+harmonized/
+results/
+data/
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store

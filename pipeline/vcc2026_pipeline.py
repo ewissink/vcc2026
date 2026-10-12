@@ -79,6 +79,7 @@ os.environ.setdefault("NUMEXPR_NUM_THREADS", _N_CORES)
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import scipy.sparse as sp
 import torch
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -419,7 +420,8 @@ def _simulate_one(args):
     context, gene, controls, lfc, n_cells, seed = args
     rng = np.random.default_rng(seed)
     pop = simulate_perturbed_population(controls, lfc, n_cells, rng)
-    return context, gene, pop
+    # Return sparse so results pickled back from workers stay small.
+    return context, gene, sp.csr_matrix(pop.astype(np.int32))
 
 
 def simulate_submission_parallel(
@@ -517,11 +519,13 @@ def assemble_submission(
         controls = control_cells_by_context[context]
         for gene, lfc in gene_preds.items():
             pop = simulate_perturbed_population(controls, lfc, cfg.n_cells_per_pert, rng)
-            all_X.append(pop)
+            # Store sparse immediately: the full submission (e.g. 360,000 cells x 18,533
+            # genes) is tens of GB dense and exceeds the Challenge's stored-entry cap.
+            all_X.append(sp.csr_matrix(pop.astype(np.int32)))
             all_context.extend([context] * cfg.n_cells_per_pert)
             all_gene.extend([gene] * cfg.n_cells_per_pert)
 
-    X = np.vstack(all_X)
+    X = sp.vstack(all_X, format="csr")
     # Column names/values confirmed against the real `vcc prep` CLI:
     # 'context' (not 'cell_type' or 'context' guessed loosely) and
     # 'target_gene'. Critically, the VALUES in the context column must
@@ -531,14 +535,18 @@ def assemble_submission(
     # was built from control_cells_by_context keyed the same way
     # baseline_random_controls.py's load_control_pools reads them.
     obs = pd.DataFrame({"context": all_context, "target_gene": all_gene})
+    # Validate before writing. Limits from the Challenge submission spec.
+    assert X.shape[1] == cfg.n_genes, f"gene dim mismatch: {X.shape[1]} != {cfg.n_genes}"
+    assert X.dtype.kind in "iu", "counts must be integers"
+    assert X.nnz == 0 or X.data.min() >= 0, "counts must be non-negative"
+    assert np.asarray(X.sum(axis=1)).max() <= 1_000_000, "a cell exceeds 1,000,000 counts"
+    assert X.nnz <= 4_750_000_000, f"{X.nnz} stored entries exceeds the 4.75e9 cap"
+    X.eliminate_zeros()  # explicitly-stored zeros count toward the cap
+
     adata_out = sc.AnnData(X=X, obs=obs, var=pd.DataFrame(index=gene_names))
     adata_out.write_h5ad(out_path)
 
-    assert X.shape[1] == cfg.n_genes, f"gene dim mismatch: {X.shape[1]} != {cfg.n_genes}"
-    assert X.dtype.kind in "iu" or np.allclose(X, np.rint(X)), "counts must be integers"
-    assert (X >= 0).all(), "counts must be non-negative"
-
-    print(f"OK: {X.shape[0]} cells x {X.shape[1]} genes written to {out_path}")
+    print(f"OK: {X.shape[0]} cells x {X.shape[1]} genes ({X.nnz} stored) written to {out_path}")
     return out_path
 
 
