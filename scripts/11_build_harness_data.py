@@ -7,15 +7,19 @@ From one Replogle-style h5ad (raw counts) it writes, into --out:
   context_<NAME>.h5ad  half of the control cells; use as the 'context' for PIE and 09_make_cells.py
   real.h5ad            panel perturbed cells (<= --max-cells each) + the OTHER half of the controls
   ctrl_heldout.h5ad    the held-out controls alone (append to predictions before scoring)
-Effect size comes from the 02_harmonize deltas (norm over covered genes, own target excluded), so
-the panel resembles the Challenge's enriched-for-effect panels. The harness is only as
-representative as its source: Replogle is 3'-capture, not 10x Flex.
+Effect size comes from the 02_harmonize deltas (norm over covered genes, own target excluded).
+By default the panel is the --n-perts strongest qualifying perturbations. With --panel-match it is
+drawn instead to follow the effect-size distribution, in this same screen, of a reference list
+(e.g. the Challenge pert_counts.csv): in K562 GWPS the Challenge perts have typical effects
+(median norm ~14, same as all perts), so a top-N panel is far more enriched than the real one.
+The harness is only as representative as its source: Replogle is 3'-capture, not 10x Flex.
 
 Usage:
     python scripts/11_build_harness_data.py --h5ad raw/ReplogleWeissman2022_K562_essential.h5ad \
         --harmonized-npz results/harmonized/replogle_k562.npz --gene-names data_dir/gene_names.csv \
         --name K562 --out harness_K562 [--n-perts 300] [--max-cells 400] [--min-cells 50] \
         [--exclude-npz results/harmonized/replogle_k562.npz results/harmonized/replogle_rpe1.npz ...]
+        [--panel-match data_dir/pert_counts.csv]
 """
 import argparse
 from pathlib import Path
@@ -53,6 +57,10 @@ def main():
                     help="harmonized .npz files whose perturbations are excluded from the panel; "
                          "pass the essential-gene screens to mimic the Challenge panel, which "
                          "avoids them (0/300 overlap with Jurkat/HepG2/RPE1/K562-essential)")
+    ap.add_argument("--panel-match", default=None,
+                    help="CSV with a target_gene column (e.g. the Challenge pert_counts.csv): draw the "
+                         "panel to match the effect-size quantiles of those perts in this screen, "
+                         "instead of taking the strongest")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
@@ -94,7 +102,32 @@ def main():
     print(f"{int(ok.sum())} perturbations qualify (>= {args.min_cells} cells, not excluded, target "
           f"mean log1p-CPM > {args.min_target_expr})", flush=True)
     cand = np.where(ok)[0]
-    panel = perts[cand[np.argsort(-eff[cand])][: args.n_perts]]
+    if args.panel_match:
+        ref = pd.read_csv(args.panel_match)["target_gene"].astype(str)
+        pidx = {p: i for i, p in enumerate(perts)}
+        ref_eff = np.array([eff[pidx[p]] for p in ref if p in pidx])
+        if len(ref_eff) == 0:
+            raise SystemExit("--panel-match: none of the reference perts are in the harmonized screen")
+        n = min(args.n_perts, len(cand))
+        targets = np.quantile(ref_eff, (np.arange(n) + 0.5) / n)
+        # greedy nearest-effect match without replacement, targets in random order so ties and
+        # crowded quantiles are not always resolved in favour of the same end of the distribution
+        free = np.ones(len(cand), dtype=bool)
+        chosen = []
+        for t in rng.permutation(targets):
+            d = np.abs(eff[cand] - t)
+            d[~free] = np.inf
+            j = int(np.argmin(d))
+            free[j] = False
+            chosen.append(cand[j])
+        panel = perts[np.array(chosen)]
+        q = [0.1, 0.25, 0.5, 0.75, 0.9]
+        print(f"panel-match: {len(ref_eff)}/{len(ref)} reference perts in screen; effect-norm "
+              f"quantiles {q}", flush=True)
+        print(f"  reference {np.round(np.quantile(ref_eff, q), 2).tolist()}", flush=True)
+        print(f"  panel     {np.round(np.quantile(eff[chosen], q), 2).tolist()}", flush=True)
+    else:
+        panel = perts[cand[np.argsort(-eff[cand])][: args.n_perts]]
     print(f"panel: {len(panel)} perts, effect norm {eff[np.isin(perts, panel)].min():.2f}.."
           f"{eff[np.isin(perts, panel)].max():.2f} (all perts median {np.median(eff):.2f})", flush=True)
 
