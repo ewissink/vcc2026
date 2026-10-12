@@ -11,11 +11,15 @@ For each (context, perturbation) row:
   4. down (e<0): binomial thinning of each cell's counts with p = 2^e;
      up (e>0): add Poisson(mu_g * (2^e - 1) * cell depth factor), where mu_g is the context's
      mean control count; (multiplying counts cannot create expression from zero);
-  4b. optionally add a donor screen's measured effects (--donor-npz from 02_harmonize.py):
-     e += donor-scale * (delta / ln2), restricted to genes the donor covers and that are expressed
+  4b. optionally add donor screens' measured effects (harmonized .npz from 02_harmonize.py):
+     e += scale * (delta / ln2), restricted to genes the donor covers and that are expressed
      in the context; delta is centered on the donor's mean over the panel (--no-donor-center to
      keep it) so the donor's own shared response is not imported; perturbations absent from the
      donor are left at the PIE base; the total is clipped to +-lfc-clip.
+     --donor CTX=a.npz[,b.npz...]:SCALE (repeatable; CTX '*' = every context without its own
+     spec) sets donors and scale per context; with several files the centered deltas are averaged
+     per gene over the donors that cover that perturbation and gene. --donor-npz / --donor-scale /
+     --donor-contexts are the older single-donor form of the same thing.
   5. genes PIE cannot predict (not on its axis) are left unchanged.
 Output: one sparse int32 h5ad with obs [context, target_gene], 18,533 genes in gene_names order,
 checked against the Challenge limits before writing. p-threshold and lfc-scale are placeholders
@@ -27,6 +31,8 @@ Usage:
         [--p-threshold 0.5] [--lfc-scale 1.0] [--min-cpm 5] [--lfc-clip 3.0]
         [--shrink 1.0] [--max-genes N]
         [--donor-npz results/harmonized/replogle_k562_gwps.npz --donor-scale 0.1] [--workers 32] [--seed 0] [--n-cells 400]
+        [--donor A=results/harmonized/replogle_k562_gwps.npz:0.3 \
+         --donor '*=results/harmonized/replogle_k562_gwps.npz,results/harmonized/xatlas_hct116.npz:0.1']
 """
 import argparse
 import json
@@ -67,6 +73,39 @@ def make_pop(job):
     return ctx, pert, sub.astype(np.int32)
 
 
+def parse_donor_specs(args):
+    """{context or '*': (files, scale)} from --donor, or from the older --donor-npz flags."""
+    if args.donor and args.donor_npz:
+        raise SystemExit("use either --donor or --donor-npz/--donor-scale/--donor-contexts, not both")
+    specs = list(args.donor or [])
+    if args.donor_npz:
+        specs = [f"{c}={args.donor_npz}:{args.donor_scale}" for c in (args.donor_contexts or ["*"])]
+    out = {}
+    for s in specs:
+        ctx, eq, rest = s.partition("=")
+        files, colon, scale = rest.rpartition(":")
+        if not (eq and colon and ctx and files):
+            raise SystemExit(f"--donor {s!r}: expected CTX=path[,path...]:SCALE")
+        if ctx in out:
+            raise SystemExit(f"--donor: context {ctx!r} given twice")
+        out[ctx] = ([f for f in files.split(",") if f], float(scale))
+    return out
+
+
+def load_donor(path, genes, pert_order, center):
+    """Panel rows of a harmonized donor: {pert: centered log2 delta}, covered-gene mask."""
+    z = np.load(path, allow_pickle=True)
+    assert list(z["genes"].astype(str)) == genes, f"{path}: donor gene axis != Challenge gene order"
+    d_idx = {g: i for i, g in enumerate(z["perts"].astype(str))}
+    hit = [p for p in pert_order if p in d_idx]
+    delta = z["delta"]                                   # one read: each z[...] access decompresses
+    rows = delta[[d_idx[p] for p in hit]].astype(np.float64) / np.log(2.0) if hit else \
+        np.zeros((0, len(genes)))                       # log1p-CPM units -> log2
+    if center and len(hit):
+        rows -= rows.mean(axis=0)
+    return {"rows": dict(zip(hit, rows)), "cov": z["covered"].astype(bool)}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pred", required=True)
@@ -80,6 +119,8 @@ def main():
                     help="blend toward the context's mean effect: 1 = PIE per-pert, 0 = mean only")
     ap.add_argument("--max-genes", type=int, default=None,
                     help="after blending, keep only the N strongest genes per perturbation")
+    ap.add_argument("--donor", action="append", default=None, metavar="CTX=a.npz[,b.npz]:SCALE",
+                    help="donors and scale for one context ('*' = all others); repeatable")
     ap.add_argument("--donor-npz", default=None, help="harmonized donor screen to blend in")
     ap.add_argument("--donor-scale", type=float, default=0.1)
     ap.add_argument("--no-donor-center", action="store_true")
@@ -127,19 +168,17 @@ def main():
         e[G["pie_to_full"][sel]] = args.lfc_scale * np.clip(lfc[sel], -args.lfc_clip, args.lfc_clip)
         return e
 
-    donor = None
-    if args.donor_npz:
-        z = np.load(args.donor_npz, allow_pickle=True)
-        assert list(z["genes"].astype(str)) == genes, "donor gene axis != Challenge gene order"
-        d_perts = z["perts"].astype(str)
-        d_idx = {g: i for i, g in enumerate(d_perts)}
-        d_delta = z["delta"].astype(np.float64) / np.log(2.0)          # log1p-CPM units -> log2
-        d_cov = z["covered"].astype(bool)
-        panel_rows = [d_idx[g] for g in pert_order if g in d_idx]
-        d_mean = d_delta[panel_rows].mean(axis=0) if panel_rows else np.zeros(len(genes))
-        print(f"donor {Path(args.donor_npz).stem}: {len(panel_rows)}/{len(pert_order)} panel perts "
-              f"covered, scale {args.donor_scale}, centered={not args.no_donor_center}", flush=True)
-        donor = True
+    donor_for = parse_donor_specs(args)
+    unknown = set(donor_for) - set(G["X"]) - {"*"}
+    if unknown:
+        raise SystemExit(f"--donor: unknown context(s) {sorted(unknown)}; contexts are {sorted(G['X'])}")
+    donors = {}
+    for files, _ in donor_for.values():
+        for f in files:
+            if f not in donors:
+                donors[f] = load_donor(f, genes, pert_order, center=not args.no_donor_center)
+                print(f"donor {Path(f).stem}: {len(donors[f]['rows'])}/{len(pert_order)} panel perts "
+                      f"covered, centered={not args.no_donor_center}", flush=True)
 
     jobs, k = [], 0
     for ctx in sorted(G["X"]):
@@ -151,13 +190,24 @@ def main():
             for i in range(E.shape[0]):               # keep the strongest N per perturbation
                 drop = np.argsort(-np.abs(E[i]))[args.max_genes:]
                 E[i, drop] = 0.0
-        if donor and (args.donor_contexts is None or ctx in args.donor_contexts):
-            ok = d_cov & G["expr_full"][ctx]
+        spec = donor_for.get(ctx, donor_for.get("*"))
+        if spec:
+            files, scale = spec
+            n_hit = 0
             for i, pert in enumerate(pert_order):
-                if pert in d_idx:
-                    dev = d_delta[d_idx[pert]] - (0.0 if args.no_donor_center else d_mean)
-                    E[i, ok] += args.donor_scale * dev[ok]
+                acc, n = np.zeros(len(genes)), np.zeros(len(genes))
+                for f in files:
+                    D = donors[f]
+                    if pert in D["rows"]:
+                        acc[D["cov"]] += D["rows"][pert][D["cov"]]
+                        n[D["cov"]] += 1
+                ok = (n > 0) & G["expr_full"][ctx]
+                if ok.any():
+                    n_hit += 1
+                    E[i, ok] += scale * acc[ok] / n[ok]       # mean over donors covering (pert, gene)
             E = np.clip(E, -args.lfc_clip, args.lfc_clip)
+            print(f"context {ctx}: donors {[Path(f).stem for f in files]} scale {scale}, "
+                  f"{n_hit}/{len(pert_order)} perts get a donor effect", flush=True)
         print(f"context {ctx}: genes changed per pert after shrink/cap: "
               f"median {int(np.median((E != 0).sum(1)))}", flush=True)
         for i, pert in enumerate(pert_order):
