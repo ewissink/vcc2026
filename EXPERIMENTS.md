@@ -13,8 +13,13 @@ marked raw.
 3. Fix the shared response (nmae -0.13 in v4) on the harness.
 4. Optional: per-pert donor weight in 09 from `split_half_challenge.csv` (job still running).
 
-Open items: v1-v3 scores and flags (not accessible right now); the identities of contexts A/B/C
-(pinned down, not yet recorded here); `pie prep` command used for `vcc2026_val`.
+Open items: v1-v3 scores and flags (not accessible right now); `pie prep` command used for
+`vcc2026_val`.
+
+Context identities (expected, from CCLE matching): **A = Jurkat, B = HeLa, C = CAL33 or CAL27**.
+No public Perturb-seq screen found for HeLa, CAL27 or CAL33 (web search 2026-10-12). Genome-wide
+donors that cover the panel: K562 GWPS (have), X-Atlas/Orion HCT116 and HEK293T (not fetched),
+KOLF2.1J iPSC CRISPRi (figshare 10.25452/figshare.plus.27261219.v1, not fetched).
 
 ## Submissions
 
