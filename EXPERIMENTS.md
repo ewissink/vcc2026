@@ -38,6 +38,12 @@ in v4, 0.1 x K562 panel mean in v5): smaller shared part -> PDS 0.03 -> 0.125 an
 though too large, carried the right directions; the K562 mean response (or having no good shared
 part) does not.
 
+v5 diagnostics: (1) generated cells carry the intended directions (sign agreement with the K562
+delta on each pert's top-200 genes 0.78-0.83; library-size ratio ~1.00; median shift ~0), so it is
+not a cell-generation artifact. (2) K562 panel mean vs PIE panel mean per context: Pearson
+-0.02 / 0.01 / 0.01 (A/B/C), top-500 sign agreement ~0.59-0.62 -- unrelated, not opposite. Neither
+explains a raw FID far below 0.5 by itself; need v5's raw values.
+
 v4 reading: with `--shrink 0` every pert got PIE's panel-mean effect (identical across perts)
 plus 0.1 x centered GWPS delta. The shared PIE part dominated each prediction's direction, so
 perts were barely distinguishable (PDS ~0.52 raw), and it is worse than the true mean response
