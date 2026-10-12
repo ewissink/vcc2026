@@ -30,7 +30,8 @@ All on partition `val`, panel `vcc2026-val-1`, anchors `vcc2026-valA-r4+valB-r4+
 | v1-v3 | TODO | | | | | | | | |
 | v4 `pred_v4_k562_0.1` | `--shrink 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.1` | 0.0106 | 0.030 | 0 | 0.010 | -0.133 | -0.028 | 0.184 | 953 |
 | v5 `pred_v5_donly_0.1_nc` | `--shrink 0 --lfc-scale 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.1 --no-donor-center` | -0.242 | 0.125 | 0 | -0.070 | 0.022 | **-1.562** | 0.037 | 1292 |
-| v6 `pred_v6_donly_0.3_nc` | same, `--donor-scale 0.3` | dropped after v5 (FID collapse) | | | | | | | |
+| ~~v6 `pred_v6_donly_0.3_nc`~~ | same, `--donor-scale 0.3` | dropped after v5 (FID collapse) | | | | | | | |
+| v6 `pred_c_pie0.5_d0.3` | `--shrink 0 --lfc-scale 0.5 --donor-npz replogle_k562_gwps.npz --donor-scale 0.3` | planned | | | | | | | |
 
 v5 vs v4 (same 0.1 x centered per-pert donor part; only the shared part differs: PIE panel mean
 in v4, 0.1 x K562 panel mean in v5): smaller shared part -> PDS 0.03 -> 0.125 and NMAE
@@ -43,6 +44,28 @@ delta on each pert's top-200 genes 0.78-0.83; library-size ratio ~1.00; median s
 not a cell-generation artifact. (2) K562 panel mean vs PIE panel mean per context: Pearson
 -0.02 / 0.01 / 0.01 (A/B/C), top-500 sign agreement ~0.59-0.62 -- unrelated, not opposite. Neither
 explains a raw FID far below 0.5 by itself; need v5's raw values.
+
+**Resolved: v5 raw FID = 0.048 is a YIELD collapse, not wrong directions.** The scored member is
+`de_wilcoxon_direction_fidelity_yield_raw = k / max(n_pred, N_conf)` (cell-eval2
+`metrics/direction.py:776`; base 0.5 = coin-flip sign): calling fewer DE genes than the truth caps
+the score at ~n_pred/N_conf. Above N_conf it is roughly sign accuracy over the called genes (v4:
+~0.5, i.e. PIE's shared directions are coin-flip quality; top teams only reach ~0.56). REACH is
+probably also count/rank based (purity floor 0.9 on genes ranked by significance).
+
+Local DE-call counts (Wilcoxon vs 2,000 context controls, BH q < 0.05, genes > 5 CPM, 25 perts per
+context; approximates but is not cell-eval2's DE):
+
+| File | median n_sig per pert | A | B | C |
+|---|---|---|---|---|
+| v4 (PIE 1.0 + donor 0.1 centered) | 4379 | 4379 | 5049 | 2335 |
+| v5 (donor 0.1 uncentered only) | 1 | 1 | 1 | 0 |
+| PIE 0.3 + donor 0.1 | 42 | 26 | 68 | 42 |
+| PIE 0.5 + donor 0.3 | 739 | 644 | 1056 | 454 |
+| PIE 1.0 + donor 0.3 | 4193 | 4193 | 4940 | 2403 |
+
+=> the PIE shared scale drives the number of DE calls, steeply. PIE 0.3 would have collapsed
+like v5 (not submitted). Rule before any submission: run the n_sig count; reject anything far
+below v4's calls until N_conf is known.
 
 v4 reading: with `--shrink 0` every pert got PIE's panel-mean effect (identical across perts)
 plus 0.1 x centered GWPS delta. The shared PIE part dominated each prediction's direction, so
