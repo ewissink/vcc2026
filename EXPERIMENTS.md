@@ -39,6 +39,13 @@ PIE's shared part -- so NMAE is not simply PIE overshooting, or donor 0.3 added 
 removed (v5, with no PIE and donor 0.1, had NMAE +0.02). PDS from the K562 donor on the real panel
 (0.10-0.125 scaled across v5/v6) is far below what the H1 proxy fold suggested.
 
+v6 raw: PDS 0.546, MSE 13.619, JAC 0.033, NMAE 1.071, FID 0.506, REACH 0.256.
+- Raw NMAE > 1 = worse than predicting no change on the true DE genes (proxy no_change = 1.0;
+  leaderboard rank 900 = 0.979). Raw MSE 13.6 is ~4x rank 900 (3.4). Together with FID ~0.5
+  (coin-flip directions), PIE's shared part looks like direction noise: needed only to produce
+  DE calls, and it costs NMAE and MSE.
+- Raw PDS 0.546: K562 transfer on the real panel is weaker than even the K562 proxy fold (0.59).
+
 v5 vs v4 (same 0.1 x centered per-pert donor part; only the shared part differs: PIE panel mean
 in v4, 0.1 x K562 panel mean in v5): smaller shared part -> PDS 0.03 -> 0.125 and NMAE
 -0.13 -> +0.02, but FID collapsed (-1.56) and REACH fell 0.18 -> 0.04. So PIE's shared part,
