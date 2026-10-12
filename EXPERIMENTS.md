@@ -31,7 +31,13 @@ All on partition `val`, panel `vcc2026-val-1`, anchors `vcc2026-valA-r4+valB-r4+
 | v4 `pred_v4_k562_0.1` | `--shrink 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.1` | 0.0106 | 0.030 | 0 | 0.010 | -0.133 | -0.028 | 0.184 | 953 |
 | v5 `pred_v5_donly_0.1_nc` | `--shrink 0 --lfc-scale 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.1 --no-donor-center` | -0.242 | 0.125 | 0 | -0.070 | 0.022 | **-1.562** | 0.037 | 1292 |
 | ~~v6 `pred_v6_donly_0.3_nc`~~ | same, `--donor-scale 0.3` | dropped after v5 (FID collapse) | | | | | | | |
-| v6 `pred_c_pie0.5_d0.3` | `--shrink 0 --lfc-scale 0.5 --donor-npz replogle_k562_gwps.npz --donor-scale 0.3` | planned | | | | | | | |
+| v6 `pred_c_pie0.5_d0.3` | `--shrink 0 --lfc-scale 0.5 --donor-npz replogle_k562_gwps.npz --donor-scale 0.3` | **0.0267** | 0.102 | 0 | 0.008 | -0.128 | -0.022 | 0.201 | 926 |
+
+v6 vs v4: best so far. PDS 0.03 -> 0.10, REACH up slightly, FID unchanged at 450-1,050 DE calls
+per pert (so N_conf is probably below ~500-1,000), but NMAE did not move (-0.128) despite halving
+PIE's shared part -- so NMAE is not simply PIE overshooting, or donor 0.3 added back what PIE 0.5
+removed (v5, with no PIE and donor 0.1, had NMAE +0.02). PDS from the K562 donor on the real panel
+(0.10-0.125 scaled across v5/v6) is far below what the H1 proxy fold suggested.
 
 v5 vs v4 (same 0.1 x centered per-pert donor part; only the shared part differs: PIE panel mean
 in v4, 0.1 x K562 panel mean in v5): smaller shared part -> PDS 0.03 -> 0.125 and NMAE
