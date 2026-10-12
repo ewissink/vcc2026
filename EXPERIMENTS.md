@@ -29,8 +29,14 @@ All on partition `val`, panel `vcc2026-val-1`, anchors `vcc2026-valA-r4+valB-r4+
 |---|---|---|---|---|---|---|---|---|---|
 | v1-v3 | TODO | | | | | | | | |
 | v4 `pred_v4_k562_0.1` | `--shrink 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.1` | 0.0106 | 0.030 | 0 | 0.010 | -0.133 | -0.028 | 0.184 | 953 |
-| v5 `pred_v5_donly_0.1_nc` | `--shrink 0 --lfc-scale 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.1 --no-donor-center` | planned | | | | | | | |
-| v6 `pred_v6_donly_0.3_nc` | same, `--donor-scale 0.3` | planned | | | | | | | |
+| v5 `pred_v5_donly_0.1_nc` | `--shrink 0 --lfc-scale 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.1 --no-donor-center` | -0.242 | 0.125 | 0 | -0.070 | 0.022 | **-1.562** | 0.037 | 1292 |
+| v6 `pred_v6_donly_0.3_nc` | same, `--donor-scale 0.3` | dropped after v5 (FID collapse) | | | | | | | |
+
+v5 vs v4 (same 0.1 x centered per-pert donor part; only the shared part differs: PIE panel mean
+in v4, 0.1 x K562 panel mean in v5): smaller shared part -> PDS 0.03 -> 0.125 and NMAE
+-0.13 -> +0.02, but FID collapsed (-1.56) and REACH fell 0.18 -> 0.04. So PIE's shared part,
+though too large, carried the right directions; the K562 mean response (or having no good shared
+part) does not.
 
 v4 reading: with `--shrink 0` every pert got PIE's panel-mean effect (identical across perts)
 plus 0.1 x centered GWPS delta. The shared PIE part dominated each prediction's direction, so
