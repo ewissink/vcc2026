@@ -46,6 +46,18 @@ v6 raw: PDS 0.546, MSE 13.619, JAC 0.033, NMAE 1.071, FID 0.506, REACH 0.256.
   DE calls, and it costs NMAE and MSE.
 - Raw PDS 0.546: K562 transfer on the real panel is weaker than even the K562 proxy fold (0.59).
 
+PIE per-pert signal vs K562 GWPS (269 covered Challenge perts, per-pert parts = centered on the
+panel mean; genes > 5 CPM in context, covered, on PIE axis; PIE lfc clipped +-3):
+| ctx | median r (null) | top-200 K562 genes sign agreement (null) |
+|---|---|---|
+| A | 0.013 (-0.001) | 0.495 (0.490) |
+| B | 0.011 (0.001) | 0.500 (0.495) |
+| C | 0.011 (-0.003) | 0.510 (0.500) |
+=> no detectable agreement between PIE's pert-specific predictions and measured K562 knockdown
+effects. Caveat: bounded by GWPS reliability for these perts (split-half pending), but GWPS does
+give some real-panel PDS (raw 0.546) while PIE shows none against it. Deprioritize PIE per-pert
+signal; work on the donor side (denoising, X-Atlas for B/C, K562->Jurkat map for A).
+
 v5 vs v4 (same 0.1 x centered per-pert donor part; only the shared part differs: PIE panel mean
 in v4, 0.1 x K562 panel mean in v5): smaller shared part -> PDS 0.03 -> 0.125 and NMAE
 -0.13 -> +0.02, but FID collapsed (-1.56) and REACH fell 0.18 -> 0.04. So PIE's shared part,
