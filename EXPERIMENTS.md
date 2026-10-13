@@ -4,17 +4,34 @@ Running record of submissions, local diagnostics and what they imply. Newest dec
 of each section. Leaderboard scores are SCALED (0 = mean-response baseline, 1 = replicate) unless
 marked raw.
 
-## Current plan (2026-10-12)
+## Status board (update after every result)
 
-1. Submit v5 / v6 (donor only, PIE switched off) to test whether cross-line transfer from
-   K562 GWPS gives PDS on the real panel, as it does on the H1 proxy fold.
-2. Rebuild the local harness with `--panel-match` (effect sizes matched to the Challenge panel)
-   and run the 09 grid on it once the `pie prep` command for the harness context is written.
-3. Fix the shared response (nmae -0.13 in v4) on the harness.
-4. Optional: per-pert donor weight in 09 from `split_half_challenge.csv` (job still running).
+_Last updated 2026-10-13._
 
-Open items: v1-v3 scores and flags (not accessible right now); `pie prep` command used for
-`vcc2026_val`.
+**Current best:** v6, overall 0.027, rank 926 -- `pred_c_pie1.0_d0.3`
+(`--shrink 0 --lfc-scale 1.0 --donor-npz results/harmonized/replogle_k562_gwps.npz --donor-scale 0.3`).
+
+**Queued for today (2 submissions):**
+| Slot | File | Tests | Gate before submitting |
+|---|---|---|---|
+| v7 | `pred_c_pie0.5_d0.3` | PIE scale 1.0 -> 0.5: does NMAE improve, does FID survive ~700 calls? | done (739 calls) |
+| v8 | `pred_c_d0.5` or `pred_c_d1.0` | no PIE at all | >= ~1,000 DE calls per pert in every context; else use `pred_c_pie1.0_rw1.0` |
+
+**Open threads:**
+| Thread | Next step | Waiting on |
+|---|---|---|
+| PIE's shared part (NMAE, MSE) | read v7 / v8 | today's scores |
+| Reliability-weighted donor (17) | test on top of whichever of v6/v7/v8 wins | v7 / v8 |
+| Better donors for B, C | fetch + harmonize X-Atlas HCT116, HEK293T | -- |
+| K562 -> Jurkat transfer map for A | fit on shared essential perts | -- |
+| Local harness | rebuild with `--panel-match`; `pie prep` on it | the `pie prep` command used for `vcc2026_val` |
+| v1-v3 | record scores and flags | access to those results |
+
+**Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
+(`--shrink > 0`) -- no agreement with K562 effects.
+
+**Rules:** run the DE-call count before every submission; name `.vcc` files after their settings
+and confirm the source file before recording a score.
 
 Context identities (expected, from CCLE matching): **A = Jurkat, B = HeLa, C = CAL33 or CAL27**.
 No public Perturb-seq screen found for HeLa, CAL27 or CAL33 (web search 2026-10-12). Genome-wide
