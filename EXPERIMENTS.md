@@ -31,19 +31,24 @@ All on partition `val`, panel `vcc2026-val-1`, anchors `vcc2026-valA-r4+valB-r4+
 | v4 `pred_v4_k562_0.1` | `--shrink 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.1` | 0.0106 | 0.030 | 0 | 0.010 | -0.133 | -0.028 | 0.184 | 953 |
 | v5 `pred_v5_donly_0.1_nc` | `--shrink 0 --lfc-scale 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.1 --no-donor-center` | -0.242 | 0.125 | 0 | -0.070 | 0.022 | **-1.562** | 0.037 | 1292 |
 | ~~v6 `pred_v6_donly_0.3_nc`~~ | same, `--donor-scale 0.3` | dropped after v5 (FID collapse) | | | | | | | |
-| v6 `pred_c_pie0.5_d0.3` | `--shrink 0 --lfc-scale 0.5 --donor-npz replogle_k562_gwps.npz --donor-scale 0.3` | **0.0267** | 0.102 | 0 | 0.008 | -0.128 | -0.022 | 0.201 | 926 |
+| v6 `pred_c_pie1.0_d0.3` (uploaded as `pred_v6_pie1.0_d0.3.vcc`) | `--shrink 0 --lfc-scale 1.0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.3` | **0.0267** | 0.102 | 0 | 0.008 | -0.128 | -0.022 | 0.201 | 926 |
 
-v6 vs v4: best so far. PDS 0.03 -> 0.10, REACH up slightly, FID unchanged at 450-1,050 DE calls
-per pert (so N_conf is probably below ~500-1,000), but NMAE did not move (-0.128) despite halving
-PIE's shared part -- so NMAE is not simply PIE overshooting, or donor 0.3 added back what PIE 0.5
-removed (v5, with no PIE and donor 0.1, had NMAE +0.02). PDS from the K562 donor on the real panel
-(0.10-0.125 scaled across v5/v6) is far below what the H1 proxy fold suggested.
+**Corrected 2026-10-13** (from shell history): v6 was PIE 1.0 + donor 0.3, NOT PIE 0.5 + donor
+0.3 as first recorded. So v6 vs v4 changes ONLY the donor scale (0.1 -> 0.3), with the same PIE
+part and the same ~4,200 DE calls per pert:
+- PDS 0.03 -> 0.10 and REACH 0.18 -> 0.20 come from the stronger donor.
+- NMAE unchanged (-0.128) is expected, since PIE's shared part did not change. The hypothesis that
+  PIE's shared magnitude drives NMAE is NOT tested yet.
+- Nothing is known yet about FID at 450-1,050 calls: only ~1 call (v5, collapse) and ~4,200
+  (v4/v6, fine) have been submitted. PIE 0.5 (739 calls locally) is untested.
+PDS from the K562 donor on the real panel (0.10-0.125 scaled across v5/v6) is far below what the
+H1 proxy fold suggested.
 
 v6 raw: PDS 0.546, MSE 13.619, JAC 0.033, NMAE 1.071, FID 0.506, REACH 0.256.
 - Raw NMAE > 1 = worse than predicting no change on the true DE genes (proxy no_change = 1.0;
   leaderboard rank 900 = 0.979). Raw MSE 13.6 is ~4x rank 900 (3.4). Together with FID ~0.5
   (coin-flip directions), PIE's shared part looks like direction noise: needed only to produce
-  DE calls, and it costs NMAE and MSE.
+  DE calls, and it costs NMAE and MSE. (v6 used PIE at full scale 1.0.)
 - Raw PDS 0.546: K562 transfer on the real panel is weaker than even the K562 proxy fold (0.59).
 
 PIE per-pert signal vs K562 GWPS (269 covered Challenge perts, per-pert parts = centered on the
