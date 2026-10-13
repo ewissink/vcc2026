@@ -44,7 +44,9 @@ def main():
     ap.add_argument("--no-keep-target", action="store_true")
     args = ap.parse_args()
 
-    df = pd.read_csv(args.split_csv)
+    # keep_default_na=False: pandas would otherwise read the label "null" (and gene names such as
+    # "NA") as missing values
+    df = pd.read_csv(args.split_csv, keep_default_na=False, na_values=["", "nan", "NaN"])
     ch = df[df["set"] == "challenge"].drop_duplicates("pert").set_index("pert")
     null = df[df["set"] == "null"]
     if ch.empty or null.empty:
