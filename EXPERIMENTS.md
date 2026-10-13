@@ -11,11 +11,14 @@ _Last updated 2026-10-13._
 **Current best:** v7, overall 0.0435 -- `pred_c_pie0.5_d0.3`
 (`--shrink 0 --lfc-scale 0.5 --donor-npz results/harmonized/replogle_k562_gwps.npz --donor-scale 0.3`).
 
-**Queued for today (2 submissions):**
-| Slot | File | Tests | Status |
+**Queued for 2026-10-14 (2 submissions; both pass the DE-call gate):**
+| Slot | File | Tests | DE calls (A / B / C) |
 |---|---|---|---|
-| v7 | `pred_c_pie0.5_d0.3` | PIE scale 1.0 -> 0.5 | **scored: 0.0435, new best** |
-| v8 | `pred_c_d1.0` | no PIE at all (centered donor 1.0, `--lfc-scale 0`) | **scored: 0.0420; PDS 0.426** |
+| v9 | `pred_c_d0.7` | donor only, scale 1.0 -> 0.7 vs v8: does MSE / NMAE drop while PDS holds? | 1,933 / 1,673 / 1,812 |
+| v10 | `pred_c_pie0.25_d0.7` | adds PIE shared 0.25 vs v9: does it recover FID / REACH? | 2,036 / 1,755 / 1,802 |
+
+Scored 2026-10-13: v7 `pred_c_pie0.5_d0.3` 0.0435 (best); v8 `pred_c_d1.0` 0.0420 (PDS 0.426).
+Also built, not queued: `pred_c_pie0.25_d1.0` (2,875 calls).
 
 **Open threads:**
 | Thread | Next step | Waiting on |
