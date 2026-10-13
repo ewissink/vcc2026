@@ -193,6 +193,7 @@ Output `split_half_challenge.csv` (on BioHPC). 272 Challenge perts in GWPS (medi
   k = 22 (23% of variance; PC1 eigenvalue 24.5 vs 4.7 for PC2); panel perts keep median 30% of
   their delta norm. H1 proxy fold with the denoised GWPS (raw -> denoised): transfer pds 0.797 ->
   0.696, transfer_scaled_other 0.814 -> 0.713, transfer_topn 0.847 -> 0.733; nmae slightly worse.
+  `--wiener` at k = 22 is slightly worse still (scaled_other 0.701, topn 0.721).
   => k = 22 HURTS on H1. Caveat: the H1 perts are probably strong, well-measured effects, unlike
   the Challenge perts. Next: k sweep / --wiener, and a split-half projection test on the
   Challenge perts themselves.
