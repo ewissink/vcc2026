@@ -194,7 +194,10 @@ Output `split_half_challenge.csv` (on BioHPC). 272 Challenge perts in GWPS (medi
   their delta norm. H1 proxy fold with the denoised GWPS (raw -> denoised): transfer pds 0.797 ->
   0.696, transfer_scaled_other 0.814 -> 0.713, transfer_topn 0.847 -> 0.733; nmae slightly worse.
   `--wiener` at k = 22 is slightly worse still (scaled_other 0.701, topn 0.721).
-  => k = 22 HURTS on H1. Caveat: the H1 perts are probably strong, well-measured effects, unlike
+  k sweep (scaled_other / topn): k=10 0.695/0.711, k=22 0.713/0.733, k=50 0.723/0.748,
+  k=100 0.735/0.765, raw 0.814/0.847 -- monotone in k, never reaches raw.
+  => PCA denoising SHELVED: on H1 every dropped component costs pert-specific signal. Use
+  per-pert reliability weighting (17_reliability_weight.py) instead. Caveat: the H1 perts are probably strong, well-measured effects, unlike
   the Challenge perts. Next: k sweep / --wiener, and a split-half projection test on the
   Challenge perts themselves.
 - Reliability ceiling: Spearman-Brown on the median split cosine gives full-data reliability
