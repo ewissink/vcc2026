@@ -200,6 +200,11 @@ Output `split_half_challenge.csv` (on BioHPC). 272 Challenge perts in GWPS (medi
   per-pert reliability weighting (17_reliability_weight.py) instead. Caveat: the H1 perts are probably strong, well-measured effects, unlike
   the Challenge perts. Next: k sweep / --wiener, and a split-half projection test on the
   Challenge perts themselves.
+- 17_reliability_weight.py (method mean): noise constant K = 3.26e4; the two estimates agree
+  (Pearson 0.946). Signal fraction f over 272 Challenge perts: quantiles 10/25/50/75/90% =
+  0.008 / 0.027 / 0.079 / 0.184 / 0.30; 39 perts > 0.25, 3 > 0.5, 15 at 0. Null groups get median
+  0.010, 90th pct 0.079 -- so about half the Challenge perts are at noise level. Output
+  `results/weighted/replogle_k562_gwps_rw.npz` (269 panel rows weighted).
 - Reliability ceiling: Spearman-Brown on the median split cosine gives full-data reliability
   ~0.09, so even a perfect predictor would correlate only ~0.3 with a GWPS delta. PIE's 0.01 is
   still far below that.
