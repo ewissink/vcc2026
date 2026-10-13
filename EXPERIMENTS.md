@@ -8,14 +8,14 @@ marked raw.
 
 _Last updated 2026-10-13._
 
-**Current best:** v6, overall 0.027, rank 926 -- `pred_c_pie1.0_d0.3`
-(`--shrink 0 --lfc-scale 1.0 --donor-npz results/harmonized/replogle_k562_gwps.npz --donor-scale 0.3`).
+**Current best:** v7, overall 0.0435 -- `pred_c_pie0.5_d0.3`
+(`--shrink 0 --lfc-scale 0.5 --donor-npz results/harmonized/replogle_k562_gwps.npz --donor-scale 0.3`).
 
 **Queued for today (2 submissions):**
-| Slot | File | Tests | Gate before submitting |
+| Slot | File | Tests | Status |
 |---|---|---|---|
-| v7 | `pred_c_pie0.5_d0.3` | PIE scale 1.0 -> 0.5: does NMAE improve, does FID survive ~700 calls? | done (739 calls) |
-| v8 | `pred_c_d1.0` | no PIE at all (centered donor 1.0, `--lfc-scale 0`) | done (2,626-2,998 calls; d0.5 had 921-1,047, borderline) |
+| v7 | `pred_c_pie0.5_d0.3` | PIE scale 1.0 -> 0.5 | **scored: 0.0435, new best** |
+| v8 | `pred_c_d1.0` | no PIE at all (centered donor 1.0, `--lfc-scale 0`) | submitted, awaiting score (2,626-2,998 calls) |
 
 **Open threads:**
 | Thread | Next step | Waiting on |
@@ -49,6 +49,12 @@ All on partition `val`, panel `vcc2026-val-1`, anchors `vcc2026-valA-r4+valB-r4+
 | v5 `pred_v5_donly_0.1_nc` | `--shrink 0 --lfc-scale 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.1 --no-donor-center` | -0.242 | 0.125 | 0 | -0.070 | 0.022 | **-1.562** | 0.037 | 1292 |
 | ~~v6 `pred_v6_donly_0.3_nc`~~ | same, `--donor-scale 0.3` | dropped after v5 (FID collapse) | | | | | | | |
 | v6 `pred_c_pie1.0_d0.3` (uploaded as `pred_v6_pie1.0_d0.3.vcc`) | `--shrink 0 --lfc-scale 1.0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.3` | **0.0267** | 0.102 | 0 | 0.008 | -0.128 | -0.022 | 0.201 | 926 |
+
+| v7 `pred_c_pie0.5_d0.3` (`pred_v7_pie0.5_d0.3.vcc`) | `--shrink 0 --lfc-scale 0.5 --donor-npz replogle_k562_gwps.npz --donor-scale 0.3` | **0.0435** | 0.199 (0.591) | 0 (3.441) | -0.017 (0.024) | 0.027 (0.983) | -0.092 (0.485) | 0.144 (0.206) | |
+
+v7 vs v6 (only PIE's shared scale 1.0 -> 0.5; DE calls ~4,200 -> ~740): PDS doubled (raw 0.546 ->
+0.591), raw MSE 13.6 -> 3.44, NMAE now above baseline (raw 1.071 -> 0.983); cost: FID raw 0.506 ->
+0.485 and REACH 0.20 -> 0.14. Net +0.017 overall. PIE's shared magnitude WAS driving NMAE and MSE.
 
 **Corrected 2026-10-13** (from shell history): v6 was PIE 1.0 + donor 0.3, NOT PIE 0.5 + donor
 0.3 as first recorded. So v6 vs v4 changes ONLY the donor scale (0.1 -> 0.3), with the same PIE
