@@ -25,7 +25,7 @@ Also built, not queued: `pred_c_pie0.25_d1.0` (2,875 calls).
 |---|---|---|
 | PIE's shared part (NMAE, MSE) | read v7 / v8 | today's scores |
 | Reliability-weighted donor (17) | test on top of whichever of v6/v7/v8 wins | v7 / v8 |
-| Better donors for B, C | fetch + harmonize X-Atlas HCT116, HEK293T | -- |
+| Better donors for B, C | HCT116 harmonized (2026-10-14): 17,768 perts, 18,106/18,533 genes covered, 165,777 controls, 290/300 panel perts -- stronger + cleaner than K562 GWPS. HEK293T next. | HEK293T download/harmonize |
 | K562 -> Jurkat transfer map for A | fit on shared essential perts | -- |
 | Local harness | rebuild with `--panel-match`; `pie prep` on it | the `pie prep` command used for `vcc2026_val` |
 | v1-v3 | record scores and flags | access to those results |
