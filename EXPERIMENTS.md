@@ -15,7 +15,7 @@ _Last updated 2026-10-13._
 | Slot | File | Tests | Gate before submitting |
 |---|---|---|---|
 | v7 | `pred_c_pie0.5_d0.3` | PIE scale 1.0 -> 0.5: does NMAE improve, does FID survive ~700 calls? | done (739 calls) |
-| v8 | `pred_c_d0.5` or `pred_c_d1.0` | no PIE at all | >= ~1,000 DE calls per pert in every context; else use `pred_c_pie1.0_rw1.0` |
+| v8 | `pred_c_d1.0` | no PIE at all (centered donor 1.0, `--lfc-scale 0`) | done (2,626-2,998 calls; d0.5 had 921-1,047, borderline) |
 
 **Open threads:**
 | Thread | Next step | Waiting on |
