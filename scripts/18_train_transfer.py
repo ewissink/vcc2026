@@ -23,9 +23,13 @@ honest test of cross-line generalization and the number to quote. The single-don
 For a real submission, pass --predict-contexts with a context->donor-line map to emit a predicted
 effect table (same gene axis and format 09_make_cells.py consumes via --pred-npz; TODO wire 09).
 
+Each fold also reports a single-donor baseline (each donor's own delta vs the held-out line's,
+cosine being scale-free) -- the number the fitted multi-donor model must beat. Features are
+standardized before the ridge, and --alphas sweeps the penalty reusing one pass over the data.
+
 Usage (leave-one-line-out proxy evaluation):
     python scripts/18_train_transfer.py --harmonized results/harmonized --splits results/splits.json \
-        --alpha 10 --out results/transfer_loco.csv
+        --alphas 1,10,100 --min-expr 0.5 --out results/transfer_loco.csv
 """
 import argparse
 import json
@@ -106,23 +110,46 @@ def build_rows(target_line, lines, line_delta, line_cov, line_cm, perts, G):
     return X, donors, names
 
 
-def ridge_fit(X, y, alpha):
-    """Closed-form ridge with an unpenalized intercept. X: (N, F), y: (N,)."""
+def ridge_precompute(X, y):
+    """Center X and y, standardize columns to unit std, and return the small Gram matrices so a
+    sweep over alpha reuses one pass over the (large) X. Weights are returned in RAW feature units."""
     mu = X.mean(0)
-    Xc = X - mu
-    ym = y.mean()
-    F = Xc.shape[1]
-    A = Xc.T @ Xc + alpha * np.eye(F, dtype=np.float64)
-    w = np.linalg.solve(A, Xc.T @ (y - ym))
-    b = ym - mu @ w
+    sd = X.std(0)
+    sd[sd < 1e-8] = 1.0
+    Xc = (X - mu) / sd
+    ym = float(y.mean())
+    XtX = Xc.T @ Xc
+    Xty = Xc.T @ (y - ym)
+    return dict(mu=mu, sd=sd, ym=ym, XtX=XtX, Xty=Xty, F=Xc.shape[1])
+
+
+def ridge_solve(pc, alpha):
+    """Ridge weights for one alpha from precomputed Gram matrices. Intercept is unpenalized."""
+    w_std = np.linalg.solve(pc["XtX"] + alpha * np.eye(pc["F"]), pc["Xty"])
+    w = w_std / pc["sd"]                                  # back to raw units
+    b = pc["ym"] - pc["mu"] @ w
     return w.astype(np.float32), np.float32(b)
+
+
+def median_cos(pred, meas, test_perts, elig, gidx):
+    """Median cosine(pred_i, meas_i) over eligible genes, each pert's own target dropped."""
+    cos = []
+    for i, p in enumerate(test_perts):
+        e = elig.copy()
+        if p in gidx:
+            e[gidx[p]] = False
+        a, m = pred[i, e], meas[i, e]
+        na, nm = np.linalg.norm(a), np.linalg.norm(m)
+        if na > 0 and nm > 0:
+            cos.append(float(a @ m / (na * nm)))
+    return float(np.median(cos)) if cos else float("nan")
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--harmonized", required=True)
     ap.add_argument("--splits", required=True)
-    ap.add_argument("--alpha", type=float, default=10.0, help="ridge penalty")
+    ap.add_argument("--alphas", default="1,10,100", help="comma-separated ridge penalties to sweep")
     ap.add_argument("--min-expr", type=float, default=0.0,
                     help="train/eval only on genes with target-line ctrl_mean above this")
     ap.add_argument("--out", default=None, help="CSV: per-fold weights and proxy cosine")
@@ -143,6 +170,7 @@ def main():
     for l in lines:
         line_delta[l], line_cov[l], line_cm[l] = merge_line(dsets, l2d[l])
 
+    alphas = [float(a) for a in args.alphas.split(",")]
     rows = []
     for line in lines:
         if line not in folds:
@@ -158,30 +186,39 @@ def main():
             keep = np.broadcast_to(line_cm[tl] > args.min_expr, (len(perts_tl), G)).reshape(-1)
             Xtr.append(X[keep]); ytr.append(y[keep])
         Xtr = np.vstack(Xtr); ytr = np.concatenate(ytr)
-        w, b = ridge_fit(Xtr, ytr, args.alpha)
+        pc = ridge_precompute(Xtr, ytr)
+        del Xtr, ytr
 
         # EVAL on the held-out line's test perts (proxy: cosine of predicted vs measured delta,
         # own target removed), restricted to covered+expressed genes
         test_perts = [p for p in folds[line]["test_perts"] if p in line_delta[line]]
         X, donors, fnames = build_rows(line, lines, line_delta, line_cov, line_cm, test_perts, G)
-        pred = (X @ w + b).reshape(len(test_perts), G)
         meas = np.vstack([line_delta[line][p] for p in test_perts])
         elig = (line_cm[line] > args.min_expr) & line_cov[line]
-        cos = []
-        for i, p in enumerate(test_perts):
-            e = elig.copy()
-            if p in gidx:
-                e[gidx[p]] = False                      # drop own target
-            a, m = pred[i, e], meas[i, e]
-            na, nm = np.linalg.norm(a), np.linalg.norm(m)
-            if na > 0 and nm > 0:
-                cos.append(float(a @ m / (na * nm)))
-        wd = dict(zip(fnames, np.round(w, 4)))
-        print(f"{line}: train rows {len(ytr)}, test perts {len(test_perts)}, "
-              f"median cos(pred, meas) {np.median(cos):.3f}", flush=True)
-        print("   donor weights:", {k: v for k, v in wd.items() if k.startswith('delta[')}, flush=True)
-        rows.append(dict(line=line, n_test=len(test_perts), median_cos=float(np.median(cos)),
-                         intercept=float(b), **wd))
+
+        # single-donor baseline: cosine is scale-free, so this is just each donor's own delta vs
+        # the held-out line's delta (no fitting). The number multi-donor must beat.
+        di = {name: j for j, name in enumerate(donors)}
+        base = {}
+        for d in donors:
+            dcol = X[:, di[d]].reshape(len(test_perts), G)    # that donor's delta block
+            base[d] = median_cos(dcol, meas, test_perts, elig, gidx)
+        best_d = max(base, key=base.get)
+        print(f"{line}: test perts {len(test_perts)}; best single donor "
+              f"{best_d} cos {base[best_d]:.3f} (all: "
+              f"{ {k: round(v,3) for k,v in base.items()} })", flush=True)
+
+        for alpha in alphas:
+            w, b = ridge_solve(pc, alpha)
+            pred = (X @ w + b).reshape(len(test_perts), G)
+            mc = median_cos(pred, meas, test_perts, elig, gidx)
+            wd = dict(zip(fnames, np.round(w, 4)))
+            dw = {k: v for k, v in wd.items() if k.startswith('delta[')}
+            print(f"   alpha {alpha:>6g}: multi-donor cos {mc:.3f}  "
+                  f"vs best-single {base[best_d]:.3f}   weights {dw}", flush=True)
+            rows.append(dict(line=line, n_test=len(test_perts), alpha=alpha, median_cos=mc,
+                             best_single_donor=best_d, best_single_cos=base[best_d],
+                             intercept=float(b), **wd))
 
     if args.out:
         pd.DataFrame(rows).to_csv(args.out, index=False)
