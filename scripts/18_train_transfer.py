@@ -77,12 +77,30 @@ def merge_line(dsets, names):
     return delta, cov, (cm_acc / max(cm_w, 1)).astype(np.float32)
 
 
-def build_rows(target_line, lines, line_delta, line_cov, line_cm, perts, G):
+def line_similarity(lines, line_cm, min_expr):
+    """Pearson r between every pair of lines' control profiles (ctrl_mean), over genes expressed
+    (> min_expr) in BOTH. Computable from control cells alone, so it is available for a held-out
+    test line from its NTC profile. Returns {(a, b): r}."""
+    sim = {}
+    for a in lines:
+        for b in lines:
+            if a == b:
+                continue
+            m = (line_cm[a] > min_expr) & (line_cm[b] > min_expr)
+            if m.sum() < 2:
+                sim[(a, b)] = 0.0
+            else:
+                sim[(a, b)] = float(np.corrcoef(line_cm[a][m], line_cm[b][m])[0, 1])
+    return sim
+
+
+def build_rows(target_line, lines, line_delta, line_cov, line_cm, perts, G, sim=None):
     """Feature matrix X and target y over (perturbation, gene) rows for `perts` in `target_line`.
-    donor lines = every line except target_line, in a fixed order."""
+    donor lines = every line except target_line, in a fixed order. With `sim`, also add each
+    donor's delta times similarity(target_line, donor) so the model can weight donors by how much
+    the target line resembles them (selection), not just a global constant (averaging)."""
     donors = [l for l in lines if l != target_line]
     n = len(perts)
-    # per-donor: delta (n, G), coverage (G,), presence of the pert (n,)
     dblocks, cblocks, pblocks, cmblocks = [], [], [], []
     for l in donors:
         d = line_delta[l]
@@ -96,17 +114,21 @@ def build_rows(target_line, lines, line_delta, line_cov, line_cm, perts, G):
         cblocks.append(np.broadcast_to(line_cov[l], (n, G)))
         pblocks.append(present)
         cmblocks.append(np.broadcast_to(line_cm[l], (n, G)))
-    # features per (p, g): [donor deltas..., donor cov..., target ctrl_mean, donor ctrl_means...,
-    #                       donor present...]
     feats = []
     feats += [b.reshape(-1, 1) for b in dblocks]                       # donor delta
     feats += [b.reshape(-1, 1).astype(np.float32) for b in cblocks]    # donor covered
     feats.append(np.broadcast_to(line_cm[target_line], (n, G)).reshape(-1, 1))   # target expr
     feats += [b.reshape(-1, 1) for b in cmblocks]                      # donor expr
     feats += [np.repeat(b, G).reshape(-1, 1) for b in pblocks]         # donor present
-    X = np.hstack(feats)
     names = ([f"delta[{l}]" for l in donors] + [f"cov[{l}]" for l in donors]
              + ["expr[target]"] + [f"expr[{l}]" for l in donors] + [f"present[{l}]" for l in donors])
+    if sim is not None:
+        # delta x similarity(target, donor): sim is constant within one fold, so this is
+        # identifiable only because sim VARIES across the stacked training folds.
+        feats += [(dblocks[j] * np.float32(sim[(target_line, l)])).reshape(-1, 1)
+                  for j, l in enumerate(donors)]
+        names += [f"delta_x_sim[{l}]" for l in donors]
+    X = np.hstack(feats)
     return X, donors, names
 
 
@@ -153,6 +175,8 @@ def main():
     ap.add_argument("--min-expr", type=float, default=0.0,
                     help="train/eval only on genes with target-line ctrl_mean above this")
     ap.add_argument("--out", default=None, help="CSV: per-fold weights and proxy cosine")
+    ap.add_argument("--no-sim", action="store_true",
+                    help="disable similarity-conditioned donor weights (reproduces global averaging)")
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
 
@@ -170,6 +194,11 @@ def main():
     for l in lines:
         line_delta[l], line_cov[l], line_cm[l] = merge_line(dsets, l2d[l])
 
+    sim = None if args.no_sim else line_similarity(lines, line_cm, args.min_expr)
+    if sim is not None:
+        print("control-profile similarity (target <- donor), per line:")
+        for a in lines:
+            print(f"  {a}: " + ", ".join(f"{b} {sim[(a,b)]:.2f}" for b in lines if b != a), flush=True)
     alphas = [float(a) for a in args.alphas.split(",")]
     rows = []
     for line in lines:
@@ -181,7 +210,7 @@ def main():
         Xtr, ytr = [], []
         for tl in train_lines:
             perts_tl = sorted(line_delta[tl])
-            X, donors, fnames = build_rows(tl, lines, line_delta, line_cov, line_cm, perts_tl, G)
+            X, donors, fnames = build_rows(tl, lines, line_delta, line_cov, line_cm, perts_tl, G, sim)
             y = np.vstack([line_delta[tl][p] for p in perts_tl]).reshape(-1)
             keep = np.broadcast_to(line_cm[tl] > args.min_expr, (len(perts_tl), G)).reshape(-1)
             Xtr.append(X[keep]); ytr.append(y[keep])
@@ -192,7 +221,7 @@ def main():
         # EVAL on the held-out line's test perts (proxy: cosine of predicted vs measured delta,
         # own target removed), restricted to covered+expressed genes
         test_perts = [p for p in folds[line]["test_perts"] if p in line_delta[line]]
-        X, donors, fnames = build_rows(line, lines, line_delta, line_cov, line_cm, test_perts, G)
+        X, donors, fnames = build_rows(line, lines, line_delta, line_cov, line_cm, test_perts, G, sim)
         meas = np.vstack([line_delta[line][p] for p in test_perts])
         elig = (line_cm[line] > args.min_expr) & line_cov[line]
 
@@ -213,7 +242,7 @@ def main():
             pred = (X @ w + b).reshape(len(test_perts), G)
             mc = median_cos(pred, meas, test_perts, elig, gidx)
             wd = dict(zip(fnames, np.round(w, 4)))
-            dw = {k: v for k, v in wd.items() if k.startswith('delta[')}
+            dw = {k: v for k, v in wd.items() if k.startswith('delta[') or k.startswith('delta_x_sim[')}
             print(f"   alpha {alpha:>6g}: multi-donor cos {mc:.3f}  "
                   f"vs best-single {base[best_d]:.3f}   weights {dw}", flush=True)
             rows.append(dict(line=line, n_test=len(test_perts), alpha=alpha, median_cos=mc,
