@@ -41,6 +41,25 @@ published data only trains a model.
 deadline 2026-11-05 23:59 UTC; max 2 final entries/day; only the LAST entry counts; no
 leaderboard during that window, so settings must be chosen without feedback.
 
+**18 transfer-model LOCO (2026-10-14, --min-expr 0.5, median cos pred vs measured):**
+| Held-out line | multi-donor | best single donor | verdict |
+|---|---|---|---|
+| HepG2 (essential) | 0.212 | RPE1 0.144 | multi wins |
+| Jurkat (essential) | 0.193 | K562 0.151 | multi wins |
+| RPE1 (essential) | 0.226 | HepG2 0.153 | multi wins |
+| H1 (Flex) | 0.076 | RPE1 0.097 | single wins |
+| K562 (genome-wide) | 0.038 | Jurkat 0.156 | single wins big |
+| HCT116 (genome-wide) | 0.022 | RPE1 0.081 | single wins big |
+| HEK293T (genome-wide) | 0.016 | Jurkat 0.057 | single wins big |
+
+- alpha (1/10/100) changes nothing -> ridge penalty is not the lever; drop the sweep.
+- Global-weight ridge ~= AVERAGING donors (weights ~0.07-0.15 each). It beats single donors on
+  the 3 essential screens but LOSES badly on the 3 genome-wide screens -- which are the
+  Challenge-like regime (non-essential perts, low signal). Averaging in mediocre donors dilutes
+  the one good one. Fix would be similarity-CONDITIONED weights (donor x target-line interaction),
+  not global constants. As built, a single well-chosen donor is better for genome-wide targets.
+- Note the best single donor is often not the obvious line (K562's is Jurkat, HCT116's is RPE1).
+
 **Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
 (`--shrink > 0`) -- no agreement with K562 effects.
 
