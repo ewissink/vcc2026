@@ -8,17 +8,16 @@ marked raw.
 
 _Last updated 2026-10-13._
 
-**Current best:** v9, overall 0.0492 -- `pred_c_d0.7`
-(`--shrink 0 --lfc-scale 0 --donor-npz results/harmonized/replogle_k562_gwps.npz --donor-scale 0.7`).
+**Current best:** v10, overall 0.0672 -- `pred_c_pie0.25_d0.7`
+(`--shrink 0 --lfc-scale 0.25 --donor-npz results/harmonized/replogle_k562_gwps.npz --donor-scale 0.7`).
 
-**Queued for 2026-10-14 (2 submissions; both pass the DE-call gate):**
-| Slot | File | Tests | Status |
-|---|---|---|---|
-| v9 | `pred_c_d0.7` | donor only, scale 1.0 -> 0.7 vs v8 | **scored: 0.0492, new best** |
-| v10 | `pred_c_pie0.25_d0.7` | adds PIE shared 0.25 vs v9: recover FID / REACH? | submitted, awaiting score |
+**Scored 2026-10-14:** v9 `pred_c_d0.7` 0.0492; v10 `pred_c_pie0.25_d0.7` **0.0672** (best).
+Progression: v4 0.011 -> v6 0.027 -> v7 0.044 -> v9 0.049 -> v10 0.067.
 
-Scored: v7 0.0435; v8 `pred_c_d1.0` 0.0420 (PDS 0.426); v9 `pred_c_d0.7` 0.0492.
-Also built, not queued: `pred_c_pie0.25_d1.0` (2,875 calls).
+**Next ideas (not yet queued; 2/day):**
+- sweep PIE shared 0.25 further (0.15, 0.35) on top of donor 0.7 -- FID/REACH vs NMAE tradeoff
+- swap/add X-Atlas HCT116+HEK293T donors (290/294/300 panel, far cleaner) for K562 GWPS
+- per-pert reliability-weighted donor (17) at donor 0.7
 
 **Open threads:**
 | Thread | Next step | Waiting on |
@@ -79,6 +78,13 @@ v9 vs v8 (donor only, scale 1.0 -> 0.7): PDS essentially held (raw 0.693 -> 0.68
 scale-free) while raw MSE dropped 9.0 -> 4.9 and NMAE 1.039 -> 0.984. Net best so far (0.0492).
 Confirms: donor DIRECTION carries PDS, donor MAGNITUDE should be ~0.7, not 1.0. FID/REACH still
 low (no shared part) -- v10 tests adding PIE 0.25.
+
+| v10 `pred_c_pie0.25_d0.7` (`pred_v10_pie0.25_d0.7.vcc`) | `--shrink 0 --lfc-scale 0.25 --donor-npz replogle_k562_gwps.npz --donor-scale 0.7` | **0.0672** | 0.370 (0.668) | 0 (5.297) | 0.014 (0.992) | -0.012 (0.026) | -0.068 (0.492) | 0.100 (0.168) | |
+
+v10 vs v9 (add PIE shared 0.25): big win (+0.018 overall). A small PIE shared part recovers FID
+(raw 0.455 -> 0.492, ~coin flip) and REACH (0.085 -> 0.100) at a small PDS cost (raw 0.689 ->
+0.668) and ~no NMAE cost (0.984 -> 0.992). So the best recipe so far = strong donor direction
+(0.7) + a LIGHT shared part (0.25) for the direction metrics. v7 had PIE 0.5; 0.25 is better.
 
 v8 vs v7: PDS more than doubled (raw 0.591 -> 0.693, between leaderboard ranks 900 and 500), so
 the K562 donor carries real pert-specific direction once nothing competes with it. But at full
