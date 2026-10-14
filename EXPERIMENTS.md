@@ -8,16 +8,16 @@ marked raw.
 
 _Last updated 2026-10-13._
 
-**Current best:** v7, overall 0.0435 -- `pred_c_pie0.5_d0.3`
-(`--shrink 0 --lfc-scale 0.5 --donor-npz results/harmonized/replogle_k562_gwps.npz --donor-scale 0.3`).
+**Current best:** v9, overall 0.0492 -- `pred_c_d0.7`
+(`--shrink 0 --lfc-scale 0 --donor-npz results/harmonized/replogle_k562_gwps.npz --donor-scale 0.7`).
 
 **Queued for 2026-10-14 (2 submissions; both pass the DE-call gate):**
-| Slot | File | Tests | DE calls (A / B / C) |
+| Slot | File | Tests | Status |
 |---|---|---|---|
-| v9 | `pred_c_d0.7` | donor only, scale 1.0 -> 0.7 vs v8: does MSE / NMAE drop while PDS holds? | 1,933 / 1,673 / 1,812 |
-| v10 | `pred_c_pie0.25_d0.7` | adds PIE shared 0.25 vs v9: does it recover FID / REACH? | 2,036 / 1,755 / 1,802 |
+| v9 | `pred_c_d0.7` | donor only, scale 1.0 -> 0.7 vs v8 | **scored: 0.0492, new best** |
+| v10 | `pred_c_pie0.25_d0.7` | adds PIE shared 0.25 vs v9: recover FID / REACH? | submitted, awaiting score |
 
-Scored 2026-10-13: v7 `pred_c_pie0.5_d0.3` 0.0435 (best); v8 `pred_c_d1.0` 0.0420 (PDS 0.426).
+Scored: v7 0.0435; v8 `pred_c_d1.0` 0.0420 (PDS 0.426); v9 `pred_c_d0.7` 0.0492.
 Also built, not queued: `pred_c_pie0.25_d1.0` (2,875 calls).
 
 **Open threads:**
@@ -72,6 +72,13 @@ v7 vs v6 (only PIE's shared scale 1.0 -> 0.5; DE calls ~4,200 -> ~740): PDS doub
 0.485 and REACH 0.20 -> 0.14. Net +0.017 overall. PIE's shared magnitude WAS driving NMAE and MSE.
 
 | v8 `pred_c_d1.0` (`pred_v8_d1.0.vcc`) | `--shrink 0 --lfc-scale 0 --donor-npz replogle_k562_gwps.npz --donor-scale 1.0` | 0.0420 | **0.426 (0.693)** | 0 (9.034) | -0.012 (0.025) | -0.063 (1.039) | -0.187 (0.457) | 0.091 (0.160) | |
+
+| v9 `pred_c_d0.7` (`pred_v9_d0.7.vcc`) | `--shrink 0 --lfc-scale 0 --donor-npz replogle_k562_gwps.npz --donor-scale 0.7` | **0.0492** | 0.393 (0.689) | 0 (4.909) | 0.027 (0.984) | -0.017 (0.024) | -0.192 (0.455) | 0.085 (0.154) | |
+
+v9 vs v8 (donor only, scale 1.0 -> 0.7): PDS essentially held (raw 0.693 -> 0.689; cosine metric,
+scale-free) while raw MSE dropped 9.0 -> 4.9 and NMAE 1.039 -> 0.984. Net best so far (0.0492).
+Confirms: donor DIRECTION carries PDS, donor MAGNITUDE should be ~0.7, not 1.0. FID/REACH still
+low (no shared part) -- v10 tests adding PIE 0.25.
 
 v8 vs v7: PDS more than doubled (raw 0.591 -> 0.693, between leaderboard ranks 900 and 500), so
 the K562 donor carries real pert-specific direction once nothing competes with it. But at full
