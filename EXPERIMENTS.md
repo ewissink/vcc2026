@@ -121,6 +121,18 @@ HEK293T, K562 GWPS.
 - CRISPRi cis-neighbor knockdown (scored, reproducible) and cell-draw/decoding quirks: untested;
   noted, not built (neighbor signal partly excluded by panel-target removal; decoding tricks fragile).
 
+### Candidate additional donors (ranked, 2026-10-15) -- donor count is the lever (v11)
+1. **CD4+ T-cell genome-scale Perturb-seq** (Zhu/Dann/Marson, bioRxiv 2025.12.23.696273):
+   genome-wide (~11.5-12.7k genes), **CRISPRi**, **10x Flex** (= Challenge platform, the only
+   Flex donor found), primary CD4 T cells (relevant to context A = Jurkat), 4 donors,
+   resting + stimulated. TOP priority IF data is released -- Dec 2025 preprint, check accession.
+   (This is the "Zhu CD4" screen already name-checked in pipeline/vcc2026_pipeline.py.)
+2. **KOLF2.1J iPSC** genome-wide CRISPRi (11,739 genes, 2.5M cells, figshare
+   10.25452/figshare.plus.27261219): downloadable now, chemistry unconfirmed. Secondary.
+3. iPSC pan-genome trans map (6,673 targets, bioRxiv 2024.11.28.625833): tertiary.
+Rejected (targeted, low panel overlap expected): Tian 2021 iPSC-neuron CROP-seq (184 genes,
+GSE152988); foreskin-fibroblast Perturb-seq (GSM5029519, likely targeted).
+
 **Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
 (`--shrink > 0`) -- no agreement with K562 effects.
 
