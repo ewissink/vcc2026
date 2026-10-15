@@ -125,8 +125,13 @@ HEK293T, K562 GWPS.
 1. **CD4+ T-cell genome-scale Perturb-seq** (Zhu/Dann/Marson, bioRxiv 2025.12.23.696273):
    genome-wide (~11.5-12.7k genes), **CRISPRi**, **10x Flex** (= Challenge platform, the only
    Flex donor found), primary CD4 T cells (relevant to context A = Jurkat), 4 donors,
-   resting + stimulated. TOP priority IF data is released -- Dec 2025 preprint, check accession.
-   (This is the "Zhu CD4" screen already name-checked in pipeline/vcc2026_pipeline.py.)
+   resting + stimulated. **RELEASED** (now in Cell) at virtualcellmodels.cziscience.com/dataset/
+   genome-scale-tcell-perturb-seq. CRISPRi + Flex (GEMX_flex_v1) confirmed. ~22M cells, 18,129
+   genes, conditions Rest/Stim8hr/Stim48hr. obs: perturbed_gene_name, guide_type non-targeting.
+   Access: `vcp data search` or S3; pseudobulk object GWCD4i.pseudobulk_merged.h5ad + DE_stats
+   objects exist (avoid the 22M-cell download). Guide list: github.com/emdann/
+   GWT_perturbseq_analysis_2025 metadata/suppl_tables. TOP priority donor for Oct 22.
+   (= "Zhu CD4" screen already name-checked in pipeline/vcc2026_pipeline.py.)
 2. **KOLF2.1J iPSC** genome-wide CRISPRi (11,739 genes, 2.5M cells, figshare
    10.25452/figshare.plus.27261219): downloadable now, chemistry unconfirmed. Secondary.
 3. iPSC pan-genome trans map (6,673 targets, bioRxiv 2024.11.28.625833): tertiary.
