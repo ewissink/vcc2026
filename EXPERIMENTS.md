@@ -21,7 +21,13 @@ Progression: v4 0.011 -> v6 0.027 -> v7 0.044 -> v9 0.049 -> v10 0.067.
   JAC -0.008 (0.028) | NMAE 0.107 (0.936) | FID -0.31 (0.503) | REACH 0.162 (0.222).
   vs v10 (K562 only): PDS, MSE, NMAE, REACH all improved by averaging 3 donors. Confirms
   averaging isolates b_p + cancels noise. Progression: v10 0.067 -> v11 0.109.
-- v12 `pred_c_pie0.25_xatlas0.7` (X-Atlas 5' only) -- awaiting score (platform test vs v10/v11).
+- v12 `pred_c_pie0.25_xatlas0.7` (X-Atlas 5' only, 2 donors) **0.0889** | PDS 0.374 (0.670) |
+  MSE 0 (3.917) | JAC -0.011 (0.026) | NMAE 0.085 (0.949) | FID -0.058 (0.495) | REACH 0.143 (0.206).
+
+**Donor-count is monotone: v10 (1 donor) 0.067 < v12 (2) 0.089 < v11 (3) 0.109.** And adding 3'
+K562 on top of 5' X-Atlas HELPED (v11 > v12), so platform mismatch does NOT dominate -- coverage +
+noise-cancellation do. ("same-platform 5:1" claim not supported, though no Flex donor tested yet;
+CD4 Flex donor is the real test.) Next lever: add the CD4 T-cell Flex donor as a 4th.
 Built, not submitted: pie0.15/0.35 + K562 donor 0.7 (PIE-scale refinement around 0.25).
 
 **Next ideas (not yet queued; 2/day):**
