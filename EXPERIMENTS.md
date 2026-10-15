@@ -27,7 +27,8 @@ Progression: v4 0.011 -> v6 0.027 -> v7 0.044 -> v9 0.049 -> v10 0.067.
 **Donor-count is monotone: v10 (1 donor) 0.067 < v12 (2) 0.089 < v11 (3) 0.109.** And adding 3'
 K562 on top of 5' X-Atlas HELPED (v11 > v12), so platform mismatch does NOT dominate -- coverage +
 noise-cancellation do. ("same-platform 5:1" claim not supported, though no Flex donor tested yet;
-CD4 Flex donor is the real test.) Next lever: add the CD4 T-cell Flex donor as a 4th.
+CD4 Flex donor is the real test.) Next lever: add the CD4 T-cell Flex donor as a 4th. CD4 panel coverage = **297/300** (12,654
+perturbed genes), best of any donor (K562 269, HCT116 290, HEK293T 294). Build donor .npz next.
 Built, not submitted: pie0.15/0.35 + K562 donor 0.7 (PIE-scale refinement around 0.25).
 
 **Next ideas (not yet queued; 2/day):**
