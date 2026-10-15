@@ -78,6 +78,22 @@ explanation (noise ceiling).
 Nuance for the real contexts: for the Jurkat fold (= context A) multi-donor DID win (0.196 vs
 single-best K562 0.151); the losses are on the epithelial genome-wide lines (analogs of B/C).
 
+### Target expression vs response strength, and the noise floor (2026-10-15)
+Per pert: baseline expression of the perturbed gene (ctrl_mean) vs effect-norm, across HCT116,
+HEK293T, K562 GWPS.
+- Raw norm is dominated by sampling noise: Spearman(n_cells, norm) = -0.89 to -0.97. Fitting
+  norm^2 = K/n_cells + signal^2 gives K ~= 4e4 (nearly identical across lines -> a property of
+  single-cell sampling, not the screen) and **83-93% of mean norm^2 is noise**.
+- Noise-corrected signal MEDIAN is 0.0 in every target-expression quartile of every line: **>50%
+  of (non-essential) perts have a response indistinguishable from noise** at achievable per-pert
+  cell counts, even in X-Atlas (200k controls -- because noise is set by cells-per-PERT, hundreds,
+  not the control pool). Only the tail carries signal (~1/3, matching the K562 split-half null test).
+- Target expression IS a real but weak driver: partial/noise-corrected Spearman ~0.10-0.20,
+  monotonic across lines.
+- Implication: the first-order knob is per-pert signal reliability (17_reliability_weight.py), not
+  target expression. Expression-gating the donor would be a weak secondary prior; not worth building
+  on its own.
+
 **Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
 (`--shrink > 0`) -- no agreement with K562 effects.
 
