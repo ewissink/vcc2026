@@ -24,6 +24,7 @@ import argparse
 from pathlib import Path
 
 import anndata as ad
+import h5py
 import numpy as np
 import pandas as pd
 
@@ -64,19 +65,24 @@ def main():
     print(f"{len(tgt_cols)}/{G} challenge genes present in CD4 object", flush=True)
 
     cond = a.obs[args.cond_col].astype(str).values
-    rows = np.where(cond == args.condition)[0]
+    rows = np.where(cond == args.condition)[0]                       # sorted ascending
     if len(rows) == 0:
         raise SystemExit(f"no rows with {args.cond_col} == {args.condition!r}; "
                          f"have {sorted(set(cond))}")
-    sub = a[rows].to_memory()
-    lfc = np.asarray(sub.layers[args.layer], dtype=np.float64)       # (n_rows, 10282), log2 FC
-    lfc = np.nan_to_num(lfc, nan=0.0, posinf=0.0, neginf=0.0)
-    pert = sub.obs[args.pert_col].astype(str).values
+    # read the layer directly with h5py: anndata's a[rows] fails because X is an empty dataset
+    with h5py.File(args.de_h5ad, "r") as f:
+        dset = f[f"layers/{args.layer}"]
+        if dset.shape[0] != a.n_obs:                                 # guard against var x obs layout
+            raise SystemExit(f"layer {args.layer} shape {dset.shape} not obs-major ({a.n_obs} obs)")
+        lfc = dset[rows]                                             # (n_rows, n_var), log2 FC
+    lfc = np.nan_to_num(np.asarray(lfc, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    obs = a.obs.iloc[rows]
+    pert = obs[args.pert_col].astype(str).values
 
     # one delta per perturbation (average if a gene appears more than once in this condition)
     def obs_num(col):
-        return (pd.to_numeric(sub.obs[col], errors="coerce").values
-                if col in sub.obs.columns else np.full(len(sub), np.nan))
+        return (pd.to_numeric(obs[col], errors="coerce").values
+                if col in obs.columns else np.full(len(obs), np.nan))
     eff = obs_num("ontarget_effect_size"); ncell = obs_num("n_cells_target")
     gcorr = obs_num("guide_correlation_all")
 
