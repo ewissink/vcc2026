@@ -60,6 +60,24 @@ leaderboard during that window, so settings must be chosen without feedback.
   not global constants. As built, a single well-chosen donor is better for genome-wide targets.
 - Note the best single donor is often not the obvious line (K562's is Jurkat, HCT116's is RPE1).
 
+**Similarity-conditioned weights (--sim, 2026-10-15): does NOT rescue it.** multi-donor cos with
+sim vs without: H1 0.033 (was 0.076), HCT116 0.020 (0.022), HEK293T 0.013 (0.016), K562 0.035
+(0.038) -- still far below best-single on all genome-wide + H1 folds; essential screens ~unchanged
+(HepG2 0.208, Jurkat 0.196, RPE1 0.222, all still > their singles). Why sim can't select: the
+immortalized lines' control profiles are ALL 0.76-0.87 correlated with each other; only H1 stands
+apart (0.36-0.50). So similarity separates "H1 vs rest," not "which immortalized donor," which is
+the choice that matters.
+**Conclusion -- trained linear transfer model SHELVED as a negative result.** No linear blend
+(global or similarity-gated) beats a single well-chosen donor in the genome-wide / low-signal
+regime that matches the Challenge. Mechanism: target deltas are ~80% noise, MSE training is
+dominated by the two huge genome-wide lines (~12k perts each vs ~1.5k for essential screens), so
+the fit chases noise and shrinks. The practical method stays single/few-donor transfer (09's
+--donor), which works (v9/v10 PDS raw ~0.69). This is a clean portfolio result: the sophisticated
+approach, honestly evaluated LOCO, loses to the simple baseline where it counts, with a mechanistic
+explanation (noise ceiling).
+Nuance for the real contexts: for the Jurkat fold (= context A) multi-donor DID win (0.196 vs
+single-best K562 0.151); the losses are on the epithelial genome-wide lines (analogs of B/C).
+
 **Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
 (`--shrink > 0`) -- no agreement with K562 effects.
 
