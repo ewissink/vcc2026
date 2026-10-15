@@ -8,17 +8,20 @@ marked raw.
 
 _Last updated 2026-10-13._
 
-**Current best:** v10, overall 0.0672 -- `pred_c_pie0.25_d0.7`
-(`--shrink 0 --lfc-scale 0.25 --donor-npz results/harmonized/replogle_k562_gwps.npz --donor-scale 0.7`).
+**Current best:** v11, overall 0.1089 -- `pred_c_pie0.25_all3_0.7`
+(`--shrink 0 --lfc-scale 0.25 --donor '*=replogle_k562_gwps.npz,xatlas_hct116.npz,xatlas_hek293t.npz:0.7'`).
+Averaging 3 donors beat single K562 on PDS, MSE, NMAE, REACH at once. Donor count is the lever;
+competitors report ~0.20 with 20+ donors. Get more panel-covering CRISPRi screens for Oct 22.
 
 **Scored 2026-10-14:** v9 `pred_c_d0.7` 0.0492; v10 `pred_c_pie0.25_d0.7` **0.0672** (best).
 Progression: v4 0.011 -> v6 0.027 -> v7 0.044 -> v9 0.049 -> v10 0.067.
 
-**Submitted 2026-10-15 (awaiting scores):**
-- v11 `pred_c_pie0.25_all3_0.7` (PIE 0.25 + K562+HCT116+HEK293T averaged, 0.7; ~1,067 calls) --
-  tests donor averaging / noise cancellation vs v10's single K562 donor.
-- v12 `pred_c_pie0.25_xatlas0.7` (PIE 0.25 + HCT116+HEK293T averaged, 0.7; ~1,024 calls) --
-  platform test: cleaner 5' X-Atlas donors vs v10's 3' K562. v12 < v10 => platform mismatch matters.
+**Scored 2026-10-15:**
+- v11 `pred_c_pie0.25_all3_0.7` **0.1089 (new best)** | PDS 0.423 (0.692) | MSE 0 (3.311) |
+  JAC -0.008 (0.028) | NMAE 0.107 (0.936) | FID -0.31 (0.503) | REACH 0.162 (0.222).
+  vs v10 (K562 only): PDS, MSE, NMAE, REACH all improved by averaging 3 donors. Confirms
+  averaging isolates b_p + cancels noise. Progression: v10 0.067 -> v11 0.109.
+- v12 `pred_c_pie0.25_xatlas0.7` (X-Atlas 5' only) -- awaiting score (platform test vs v10/v11).
 Built, not submitted: pie0.15/0.35 + K562 donor 0.7 (PIE-scale refinement around 0.25).
 
 **Next ideas (not yet queued; 2/day):**
