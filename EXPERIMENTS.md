@@ -14,6 +14,13 @@ _Last updated 2026-10-13._
 **Scored 2026-10-14:** v9 `pred_c_d0.7` 0.0492; v10 `pred_c_pie0.25_d0.7` **0.0672** (best).
 Progression: v4 0.011 -> v6 0.027 -> v7 0.044 -> v9 0.049 -> v10 0.067.
 
+**Submitted 2026-10-15 (awaiting scores):**
+- v11 `pred_c_pie0.25_all3_0.7` (PIE 0.25 + K562+HCT116+HEK293T averaged, 0.7; ~1,067 calls) --
+  tests donor averaging / noise cancellation vs v10's single K562 donor.
+- v12 `pred_c_pie0.25_xatlas0.7` (PIE 0.25 + HCT116+HEK293T averaged, 0.7; ~1,024 calls) --
+  platform test: cleaner 5' X-Atlas donors vs v10's 3' K562. v12 < v10 => platform mismatch matters.
+Built, not submitted: pie0.15/0.35 + K562 donor 0.7 (PIE-scale refinement around 0.25).
+
 **Next ideas (not yet queued; 2/day):**
 - sweep PIE shared 0.25 further (0.15, 0.35) on top of donor 0.7 -- FID/REACH vs NMAE tradeoff
 - swap/add X-Atlas HCT116+HEK293T donors (290/294/300 panel, far cleaner) for K562 GWPS
