@@ -27,8 +27,11 @@ Progression: v4 0.011 -> v6 0.027 -> v7 0.044 -> v9 0.049 -> v10 0.067.
 **Donor-count is monotone: v10 (1 donor) 0.067 < v12 (2) 0.089 < v11 (3) 0.109.** And adding 3'
 K562 on top of 5' X-Atlas HELPED (v11 > v12), so platform mismatch does NOT dominate -- coverage +
 noise-cancellation do. ("same-platform 5:1" claim not supported, though no Flex donor tested yet;
-CD4 Flex donor is the real test.) Next lever: add the CD4 T-cell Flex donor as a 4th. CD4 panel coverage = **297/300** (12,654
-perturbed genes), best of any donor (K562 269, HCT116 290, HEK293T 294). Build donor .npz next.
+CD4 Flex donor is the real test.) Next lever: add the CD4 T-cell Flex donor as a 4th. CD4 panel coverage = 297/300 in the guide
+library; the Rest-condition DE object (19_cd4_donor.py -> cd4_rest.npz) covers 283/300 perts,
+10,113 genes, delta = DESeq2 log2FC x ln2. 4-donor union now covers **300/300** panel perts.
+READY: v13 `pred_c_pie0.25_4donor_0.7` (PIE 0.25 + K562+HCT116+HEK293T+CD4 avg 0.7),
+DE calls 703/763/776 (A/B/C) -- clears gate. Tests donor #4 + whether Flex CD4 adds beyond count.
 Built, not submitted: pie0.15/0.35 + K562 donor 0.7 (PIE-scale refinement around 0.25).
 
 **Next ideas (not yet queued; 2/day):**
