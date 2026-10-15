@@ -94,6 +94,23 @@ HEK293T, K562 GWPS.
   target expression. Expression-gating the donor would be a weak secondary prior; not worth building
   on its own.
 
+### Competitor-board ideas checked (2026-10-15)
+- "Predict only the change, apply to control cells" and "centered cross-context mean (b_p + i_cp)"
+  = exactly our 09 design + donor centering. Validated.
+- "Averaging donors -> ~0.14 overall, broad collection -> ~0.20" (competitors). So public-data
+  averaging reaches rank ~500-100; our 0.067 is donor-COUNT-limited (3 panel donors vs their 20+),
+  not method-limited. Adding donors is the main lever.
+- "Targets agree across lines at cosine ~0.04" = our split-half finding. Validated.
+- "Same-PLATFORM beats same-cell-type 5:1": chemistry lookups -- X-Atlas is 10x GEM-X **5'** (FiCS),
+  Replogle K562 is 3'. Challenge is **Flex**. So NONE of our panel-covering donors match the
+  Challenge platform; only VCC-2025 H1 is Flex (0 panel overlap). If the 5:1 claim holds, this
+  caps public-donor transfer and we can't fix it from these sources.
+- DepMap perturb-seq 16-line (broadinstitute/perturb-seq-depmap-public): CRISPR **KO** (not CRISPRi),
+  a "pilot", chemistry/coverage/download only on depmap.org. KO modality + uncertain panel coverage
+  -> lower priority.
+- CRISPRi cis-neighbor knockdown (scored, reproducible) and cell-draw/decoding quirks: untested;
+  noted, not built (neighbor signal partly excluded by panel-target removal; decoding tricks fragile).
+
 **Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
 (`--shrink > 0`) -- no agreement with K562 effects.
 
