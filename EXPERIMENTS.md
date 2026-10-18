@@ -41,22 +41,20 @@ Built, not submitted: pie0.15/0.35 + K562 donor 0.7 (PIE-scale refinement around
 - swap/add X-Atlas HCT116+HEK293T donors (290/294/300 panel, far cleaner) for K562 GWPS
 - per-pert reliability-weighted donor (17) at donor 0.7
 
-### TOMORROW (next submission day) -- 2 slots, both candidates built + gated
-Current best = v13 `pred_c_pie0.25_4donor_0.7` = 0.116. v14 (uniform DE-freq) = 0.107 (below v13).
+### NEXT submission day -- 1 real candidate left
+Current best = v13 `pred_c_pie0.25_4donor_0.7` = 0.116. v14 (uniform DE-freq) = 0.107.
+v15 (per-pert-weighted DE-freq) DROPPED -- weighting didn't engage on the panel (= v14); not worth a slot.
 
-1. **Submit v15** = per-pert-weighted DE-freq (gated 977-1044 calls):
-   `vcc prep pred_c_defreq10w_4donor_0.7.h5ad -g data_dir/gene_names.csv --perts data_dir/pert_counts.csv -o pred_v15_defreq10w_4donor_0.7.vcc`
-   `vcc submit pred_v15_defreq10w_4donor_0.7.vcc -m defreq10w_4donor_0.7`
-   Test: does per-pert weighting recover v14's lost PDS while keeping its FID gain -> beat v13?
-2. **Submit v15-RW** = reliability-weighted K562 donor on the v13 recipe (BUILD + gate first if not done):
+1. **Submit v15-RW** = reliability-weighted K562 donor on the v13 recipe. Build + gate, then submit:
    build: `python scripts/09_make_cells.py --pred pred_val_full.parquet --pie-meta /workdir/emw97/pie/data/vcc2026_val/meta.json --data-dir data_dir --pert-counts data_dir/pert_counts.csv --out pred_c_pie0.25_4donorRW_0.7.h5ad --workers 32 --shrink 0 --lfc-scale 0.25 --donor '*=results/weighted/replogle_k562_gwps_rw.npz,results/harmonized/xatlas_hct116.npz,results/harmonized/xatlas_hek293t.npz,results/harmonized/cd4_rest.npz:0.7'`
-   then gate; `vcc prep ... -o pred_v15RW_...vcc` / `vcc submit ... -m pie0.25_4donorRW_0.7`.
-   Test: does down-weighting noisy K562 perts help?
-3. Record both scores (scaled + raw); update Current best.
+   gate vs v13, then `vcc prep pred_c_pie0.25_4donorRW_0.7.h5ad -g data_dir/gene_names.csv --perts data_dir/pert_counts.csv -o pred_v15RW_pie0.25_4donorRW_0.7.vcc` / `vcc submit pred_v15RW_pie0.25_4donorRW_0.7.vcc -m pie0.25_4donorRW_0.7`.
+   Test: does down-weighting noisy K562 perts (split-half reliability) help?
+2. Record score; update Current best.
 
-DECISION: if neither v15 nor v15-RW beats v13 (0.116), LOCK v13-style as the final pipeline and
-shift to write-up. Oct-22 final-test data is imminent; NO leaderboard Oct22-Nov5 (pick blind ->
-keep the local harness + DE-call gate for selection). Don't chase 0.01s past this.
+DECISION: if v15-RW does not beat v13 (0.116), LOCK v13-style as the final pipeline and shift to
+write-up. Every lever will then be tested: donor count, platform, shared-response source (PIE vs
+DE-freq), per-pert shared weighting, donor reliability. Oct-22 final-test data imminent; NO
+leaderboard Oct22-Nov5 (pick blind -> keep local harness + DE-call gate). Don't chase 0.01s past this.
 
 **Open threads:**
 | Thread | Next step | Waiting on |
@@ -211,7 +209,12 @@ Small-effect analysis (HCT116, effect terciles): low stratum = 2 DE genes/pert (
 Spearman(low,high freq) 0.74 but top-100 Jaccard 0.13 -- broad hierarchy shared, top responders
 differ for weak perts. => per-pert shared weighting (09 --shared-weight-by-donor) should recover
 PDS: scale shared by donor norm so silent perts get ~0 shared (non-uniform -> discriminable).
-NEXT: build pred_c_defreq10w_4donor_0.7 with --shared-weight-by-donor, gate, submit.
+Per-pert weighting (--shared-weight-by-donor) did NOT engage: build log shows median weight 1.00,
+0/300 perts near-zero in every context -> candidate ~= uniform v14 (gate 991 vs 1013), so not
+submitted. Reason (useful finding): the near-silent perts (2 DE genes) are a full-screen
+phenomenon; the 300 PANEL perts are a selected set that all have substantial donor effects, so
+there is no silent subset within the panel to down-weight. => DE-freq shared (uniform or weighted)
+improves FID but costs PDS; net below v13's PIE shared. DE-freq shelved as a lateral move.
 
 **Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
 (`--shrink > 0`) -- no agreement with K562 effects.
