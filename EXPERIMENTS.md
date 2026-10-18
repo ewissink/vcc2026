@@ -8,10 +8,11 @@ marked raw.
 
 _Last updated 2026-10-13._
 
-**Current best:** v11, overall 0.1089 -- `pred_c_pie0.25_all3_0.7`
-(`--shrink 0 --lfc-scale 0.25 --donor '*=replogle_k562_gwps.npz,xatlas_hct116.npz,xatlas_hek293t.npz:0.7'`).
-Averaging 3 donors beat single K562 on PDS, MSE, NMAE, REACH at once. Donor count is the lever;
-competitors report ~0.20 with 20+ donors. Get more panel-covering CRISPRi screens for Oct 22.
+**Current best:** v13, overall 0.1160 -- `pred_c_pie0.25_4donor_0.7`
+(`--shrink 0 --lfc-scale 0.25 --donor '*=replogle_k562_gwps.npz,xatlas_hct116.npz,xatlas_hek293t.npz,cd4_rest.npz:0.7'`).
+Donor count is the lever (v10 1-donor 0.067 -> v12 2 0.089 -> v11 3 0.109 -> v13 4 0.116;
+diminishing returns per donor). Adding the CD4 Flex donor gave only +0.007 -> no platform-match
+windfall; coverage/count drive it. Competitors report ~0.20 with 20+ donors. Next: add iPSC donors.
 
 **Scored 2026-10-14:** v9 `pred_c_d0.7` 0.0492; v10 `pred_c_pie0.25_d0.7` **0.0672** (best).
 Progression: v4 0.011 -> v6 0.027 -> v7 0.044 -> v9 0.049 -> v10 0.067.
@@ -30,8 +31,9 @@ noise-cancellation do. ("same-platform 5:1" claim not supported, though no Flex 
 CD4 Flex donor is the real test.) Next lever: add the CD4 T-cell Flex donor as a 4th. CD4 panel coverage = 297/300 in the guide
 library; the Rest-condition DE object (19_cd4_donor.py -> cd4_rest.npz) covers 283/300 perts,
 10,113 genes, delta = DESeq2 log2FC x ln2. 4-donor union now covers **300/300** panel perts.
-READY: v13 `pred_c_pie0.25_4donor_0.7` (PIE 0.25 + K562+HCT116+HEK293T+CD4 avg 0.7),
-DE calls 703/763/776 (A/B/C) -- clears gate. Tests donor #4 + whether Flex CD4 adds beyond count.
+v13 `pred_c_pie0.25_4donor_0.7` SCORED **0.1160 (best)** | PDS 0.440 (0.700) | MSE 0 (2.828) |
+JAC -0.004 (0.029) | NMAE 0.123 (0.926) | FID -0.035 (0.502) | REACH 0.173 (0.232). +0.007 vs v11
+-> CD4 Flex donor = ordinary donor-count gain, no platform windfall.
 Built, not submitted: pie0.15/0.35 + K562 donor 0.7 (PIE-scale refinement around 0.25).
 
 **Next ideas (not yet queued; 2/day):**
