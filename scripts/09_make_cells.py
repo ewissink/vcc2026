@@ -119,6 +119,10 @@ def main():
                     help="blend toward the context's mean effect: 1 = PIE per-pert, 0 = mean only")
     ap.add_argument("--max-genes", type=int, default=None,
                     help="after blending, keep only the N strongest genes per perturbation")
+    ap.add_argument("--shared-npz", default=None,
+                    help="DE-frequency shared profile (21_de_frequency.py) to use as the shared "
+                         "response instead of PIE's panel mean; scaled by --shared-scale")
+    ap.add_argument("--shared-scale", type=float, default=1.0)
     ap.add_argument("--donor", action="append", default=None, metavar="CTX=a.npz[,b.npz]:SCALE",
                     help="donors and scale for one context ('*' = all others); repeatable")
     ap.add_argument("--donor-npz", default=None, help="harmonized donor screen to blend in")
@@ -180,11 +184,19 @@ def main():
                 print(f"donor {Path(f).stem}: {len(donors[f]['rows'])}/{len(pert_order)} panel perts "
                       f"covered, centered={not args.no_donor_center}", flush=True)
 
+    shared_profile = None
+    if args.shared_npz:
+        z = np.load(args.shared_npz, allow_pickle=True)
+        assert list(z["genes"].astype(str)) == genes, "shared-npz gene axis != Challenge order"
+        shared_profile = args.shared_scale * z["shared"].astype(np.float64) / np.log(2.0)  # ->log2
+        print(f"shared profile {Path(args.shared_npz).stem}: scale {args.shared_scale}, "
+              f"{int((shared_profile!=0).sum())} nonzero genes (replaces PIE panel mean)", flush=True)
+
     jobs, k = [], 0
     for ctx in sorted(G["X"]):
         E = np.vstack([effect(ctx, *lookup[(ctx, pert)]) for pert in pert_order])
         assert all(len(lookup[(ctx, p)][0]) == len(pie_genes) for p in pert_order)
-        mean_e = E.mean(axis=0)                       # the context's shared response
+        mean_e = shared_profile if shared_profile is not None else E.mean(axis=0)   # shared response
         E = mean_e + args.shrink * (E - mean_e)       # shrink=1 keeps PIE; 0 = mean only
         if args.max_genes:
             for i in range(E.shape[0]):               # keep the strongest N per perturbation
