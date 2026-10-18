@@ -189,6 +189,15 @@ Feng-GW-iPSC + Feng-TS-iPSC (figshare 27989294.v2), Pan-GP-H1 (GEO GSE295214), N
 (10.25442/hku.34002315)** -- may give ready-to-use effect matrices, saving harmonize effort.
 Code: github.com/liuqiyuanhhh/perturbation-structure; preprocessing = crispyx (pypi).
 
+**HKU DataHub (figshare article 34002315) = READY donors.** 69 files. `effect_<screen>.zip` =
+per-pert effect matrix (pert x gene) + SEs, AnnData .h5ad, uniformly processed (crispyx), effect =
+batch-aware mean diff of log(1+x) -> SAME family as our 02_harmonize deltas, so drops into our
+average with no unit mismatch. Much smaller than raw cells. Download via ndownloader.figshare.com/
+files/<id>. New genome-wide donors to add (effect_ zips): Pan-GW-hESC (H1! file 69471805, 2.8GB),
+Feng-gwsf (69471714, 1.4GB), Feng-gwsnf (69471750, 2.2GB), Nourreddine-GW-ipsc (69472512, 11.5GB).
+Also effect_ for K562/Huang/etc if we want uniform re-processing. SEs enable noise weighting.
+NOT in this set: CD4/Marson (separate, done). README=69528249, MANIFEST=69528252.
+
 **Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
 (`--shrink > 0`) -- no agreement with K562 effects.
 
