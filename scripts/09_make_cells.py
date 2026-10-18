@@ -123,6 +123,12 @@ def main():
                     help="DE-frequency shared profile (21_de_frequency.py) to use as the shared "
                          "response instead of PIE's panel mean; scaled by --shared-scale")
     ap.add_argument("--shared-scale", type=float, default=1.0)
+    ap.add_argument("--shared-weight-by-donor", action="store_true",
+                    help="scale the shared profile per perturbation by its donor-effect norm, so "
+                         "near-silent perts (small donor effect) get little/no shared response "
+                         "(they barely respond; the global hierarchy mispredicts their top genes)")
+    ap.add_argument("--shared-weight-pct", type=float, default=50.0,
+                    help="donor-norm percentile mapped to full shared weight (perts at/above = 1.0)")
     ap.add_argument("--donor", action="append", default=None, metavar="CTX=a.npz[,b.npz]:SCALE",
                     help="donors and scale for one context ('*' = all others); repeatable")
     ap.add_argument("--donor-npz", default=None, help="harmonized donor screen to blend in")
@@ -193,19 +199,17 @@ def main():
               f"{int((shared_profile!=0).sum())} nonzero genes (replaces PIE panel mean)", flush=True)
 
     jobs, k = [], 0
+    npert = len(pert_order)
     for ctx in sorted(G["X"]):
-        E = np.vstack([effect(ctx, *lookup[(ctx, pert)]) for pert in pert_order])
+        Epie = np.vstack([effect(ctx, *lookup[(ctx, pert)]) for pert in pert_order])
         assert all(len(lookup[(ctx, p)][0]) == len(pie_genes) for p in pert_order)
-        mean_e = shared_profile if shared_profile is not None else E.mean(axis=0)   # shared response
-        E = mean_e + args.shrink * (E - mean_e)       # shrink=1 keeps PIE; 0 = mean only
-        if args.max_genes:
-            for i in range(E.shape[0]):               # keep the strongest N per perturbation
-                drop = np.argsort(-np.abs(E[i]))[args.max_genes:]
-                E[i, drop] = 0.0
+
+        # donor matrix first, so its per-pert norm can weight the shared profile
+        Dmat = np.zeros((npert, len(genes)))
+        n_hit = 0
         spec = donor_for.get(ctx, donor_for.get("*"))
         if spec:
             files, scale = spec
-            n_hit = 0
             for i, pert in enumerate(pert_order):
                 acc, n = np.zeros(len(genes)), np.zeros(len(genes))
                 for f in files:
@@ -216,12 +220,33 @@ def main():
                 ok = (n > 0) & G["expr_full"][ctx]
                 if ok.any():
                     n_hit += 1
-                    E[i, ok] += scale * acc[ok] / n[ok]       # mean over donors covering (pert, gene)
-            E = np.clip(E, -args.lfc_clip, args.lfc_clip)
+                    Dmat[i, ok] = scale * acc[ok] / n[ok]     # mean over donors covering (pert, gene)
+
+        # shared/base response
+        if shared_profile is not None:
+            if args.shared_weight_by_donor:
+                dn = np.linalg.norm(Dmat, axis=1)
+                ref = np.percentile(dn[dn > 0], args.shared_weight_pct) if (dn > 0).any() else 1.0
+                w = np.clip(dn / max(ref, 1e-9), 0.0, 1.0)    # 0 for near-silent perts
+                print(f"context {ctx}: per-pert shared weight median {np.median(w):.2f}, "
+                      f"{int((w < 0.1).sum())}/{npert} perts near-zero", flush=True)
+            else:
+                w = np.ones(npert)
+            E = w[:, None] * shared_profile[None, :]          # shared mode: PIE dropped
+        else:
+            mean_e = Epie.mean(axis=0)
+            E = mean_e + args.shrink * (Epie - mean_e)        # shrink=1 keeps PIE; 0 = mean only
+        if args.max_genes:
+            for i in range(E.shape[0]):                       # cap base before donor
+                drop = np.argsort(-np.abs(E[i]))[args.max_genes:]
+                E[i, drop] = 0.0
+
+        E = np.clip(E + Dmat, -args.lfc_clip, args.lfc_clip)
+        if spec:
             print(f"context {ctx}: donors {[Path(f).stem for f in files]} scale {scale}, "
-                  f"{n_hit}/{len(pert_order)} perts get a donor effect", flush=True)
-        print(f"context {ctx}: genes changed per pert after shrink/cap: "
-              f"median {int(np.median((E != 0).sum(1)))}", flush=True)
+                  f"{n_hit}/{npert} perts get a donor effect", flush=True)
+        print(f"context {ctx}: genes changed per pert: median {int(np.median((E != 0).sum(1)))}",
+              flush=True)
         for i, pert in enumerate(pert_order):
             jobs.append((ctx, pert, E[i], [args.seed, k]))
             k += 1
