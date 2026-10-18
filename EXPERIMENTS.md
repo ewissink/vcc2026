@@ -41,21 +41,22 @@ Built, not submitted: pie0.15/0.35 + K562 donor 0.7 (PIE-scale refinement around
 - swap/add X-Atlas HCT116+HEK293T donors (290/294/300 panel, far cleaner) for K562 GWPS
 - per-pert reliability-weighted donor (17) at donor 0.7
 
-### TOMORROW (next submission day) -- 2 slots
-1. Sync: `git pull origin main` (if working on a fresh checkout).
-2. **Submit v13** (equal-weight 4-donor, already built + gated):
-   `vcc prep pred_c_pie0.25_4donor_0.7.h5ad -g data_dir/gene_names.csv --perts data_dir/pert_counts.csv -o pred_v13_pie0.25_4donor_0.7.vcc`
-   `vcc submit pred_v13_pie0.25_4donor_0.7.vcc -m pie0.25_4donor_0.7`
-3. **Build + gate v14** (CD4 up-weighted 2x, if not built tonight) -- cd4_rest listed twice:
-   `python scripts/09_make_cells.py --pred pred_val_full.parquet --pie-meta /workdir/emw97/pie/data/vcc2026_val/meta.json --data-dir data_dir --pert-counts data_dir/pert_counts.csv --out pred_c_pie0.25_4donorCD4x2_0.7.h5ad --workers 32 --shrink 0 --lfc-scale 0.25 --donor '*=results/harmonized/replogle_k562_gwps.npz,results/harmonized/xatlas_hct116.npz,results/harmonized/xatlas_hek293t.npz,results/harmonized/cd4_rest.npz,results/harmonized/cd4_rest.npz:0.7'`
-   then DE-call gate (need >=~500/ctx).
-4. **Submit v14** as 2nd slot: `vcc prep ... -o pred_v14_pie0.25_4donorCD4x2_0.7.vcc` then `vcc submit ... -m pie0.25_4donorCD4x2_0.7`.
-5. Record both scores (scaled + raw) in the Submissions table; update Current best.
+### TOMORROW (next submission day) -- 2 slots, both candidates built + gated
+Current best = v13 `pred_c_pie0.25_4donor_0.7` = 0.116. v14 (uniform DE-freq) = 0.107 (below v13).
 
-Read: v13 vs v11 (0.109) = does donor #4 help? v13 step vs the v10->v12 step = does Flex CD4 add
-beyond donor count (platform)? v14 vs v13 = does CD4 deserve extra weight?
-Context: final-test perts + NTC released 2026-10-22; deadline 2026-11-05; NO leaderboard Oct22-Nov5
-(pick final entry blind -> keep the local harness working for selection).
+1. **Submit v15** = per-pert-weighted DE-freq (gated 977-1044 calls):
+   `vcc prep pred_c_defreq10w_4donor_0.7.h5ad -g data_dir/gene_names.csv --perts data_dir/pert_counts.csv -o pred_v15_defreq10w_4donor_0.7.vcc`
+   `vcc submit pred_v15_defreq10w_4donor_0.7.vcc -m defreq10w_4donor_0.7`
+   Test: does per-pert weighting recover v14's lost PDS while keeping its FID gain -> beat v13?
+2. **Submit v15-RW** = reliability-weighted K562 donor on the v13 recipe (BUILD + gate first if not done):
+   build: `python scripts/09_make_cells.py --pred pred_val_full.parquet --pie-meta /workdir/emw97/pie/data/vcc2026_val/meta.json --data-dir data_dir --pert-counts data_dir/pert_counts.csv --out pred_c_pie0.25_4donorRW_0.7.h5ad --workers 32 --shrink 0 --lfc-scale 0.25 --donor '*=results/weighted/replogle_k562_gwps_rw.npz,results/harmonized/xatlas_hct116.npz,results/harmonized/xatlas_hek293t.npz,results/harmonized/cd4_rest.npz:0.7'`
+   then gate; `vcc prep ... -o pred_v15RW_...vcc` / `vcc submit ... -m pie0.25_4donorRW_0.7`.
+   Test: does down-weighting noisy K562 perts help?
+3. Record both scores (scaled + raw); update Current best.
+
+DECISION: if neither v15 nor v15-RW beats v13 (0.116), LOCK v13-style as the final pipeline and
+shift to write-up. Oct-22 final-test data is imminent; NO leaderboard Oct22-Nov5 (pick blind ->
+keep the local harness + DE-call gate for selection). Don't chase 0.01s past this.
 
 **Open threads:**
 | Thread | Next step | Waiting on |
