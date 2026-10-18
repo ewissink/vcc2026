@@ -200,6 +200,18 @@ Feng-gwsf (69471714, 1.4GB), Feng-gwsnf (69471750, 2.2GB), Nourreddine-GW-ipsc (
 Also effect_ for K562/Huang/etc if we want uniform re-processing. SEs enable noise weighting.
 NOT in this set: CD4/Marson (separate, done). README=69528249, MANIFEST=69528252.
 
+### DE-frequency shared response (Liu/Wang 2026 idea; 21_de_frequency.py + 09 --shared-npz)
+v14 `pred_c_defreq10_4donor_0.7` (DE-freq shared scale 10 replaces PIE shared; 4-donor 0.7):
+overall **0.1073** | PDS 0.373 (0.669) | MSE 0 (3.311) | JAC -0.004 (0.029) | NMAE 0.122 (0.926) |
+FID 0 (0.513) | REACH 0.152 (0.214). vs v13 (PIE shared, 0.116): FID UP (raw 0.502->0.513, best
+yet -- DE-freq directions beat PIE's coin-flip) but PDS DOWN (0.440->0.373) -- a strong UNIFORM
+shared component makes perts alike -> worse discrimination. Net slightly below v13.
+Small-effect analysis (HCT116, effect terciles): low stratum = 2 DE genes/pert (noise floor),
+Spearman(low,high freq) 0.74 but top-100 Jaccard 0.13 -- broad hierarchy shared, top responders
+differ for weak perts. => per-pert shared weighting (09 --shared-weight-by-donor) should recover
+PDS: scale shared by donor norm so silent perts get ~0 shared (non-uniform -> discriminable).
+NEXT: build pred_c_defreq10w_4donor_0.7 with --shared-weight-by-donor, gate, submit.
+
 **Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
 (`--shrink > 0`) -- no agreement with K562 effects.
 
