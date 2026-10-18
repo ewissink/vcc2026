@@ -164,6 +164,31 @@ HEK293T, K562 GWPS.
 Rejected (targeted, low panel overlap expected): Tian 2021 iPSC-neuron CROP-seq (184 genes,
 GSE152988); foreskin-fibroblast Perturb-seq (GSM5029519, likely targeted).
 
+### Liu/Wang et al. 2026 (biorxiv 2026.10.05.756839) -- validates + extends our approach
+Team placed 3rd in VCC-2025 with "DE-frequency + cross-dataset weighted transfer". Key points:
+- **Weighted-average cross-dataset transfer is best for PDS** and residual cosine, beating PRESAGE,
+  cross-dataset linear (embeddings), GEARS, scGPT-ft. Confirms our v11 donor-averaging win and our
+  shelving of the trained transfer model (low-dim embeddings lose to direct transfer).
+- Their average is **similarity-weighted** (w_d = mean noise-corrected cosine sim of donor d to
+  target over shared perts) and **noise-corrected**; per-(pert,gene) average only over donors that
+  measured it (we already do this). Negative weights -> 0.
+- **DE-frequency ranking (NEW for us):** rank outcome genes by how often they're DE across the
+  donor perturbations (perturbation-AGNOSTIC). Among the strongest predictors of which genes
+  respond, esp. for small effects. A shared "hierarchy of responsive genes." Would help our
+  sig_jaccard / direction_reach (which genes to call DE). Their 3rd-place entry = DE-freq + transfer.
+- **Leading global trend:** first SVD component of each screen's effect matrix ~ fitness/essentiality
+  (bigger in immortalized lines). Removing it ("residual") isolates perturbation-specific signal =
+  what PDS/residual-cosine reward. More principled than our panel-mean centering.
+- Noise correction (subtract SE^2 from squared norms) = our split-half idea, confirmed.
+
+**Donor list from their Data availability (all public) -- candidates to add to our average:**
+have K562(Zenodo 10044268), Nadig HepG2/Jurkat(GSE264667, 0 panel overlap), Huang=X-Atlas
+HCT116/HEK293T(figshare 29190726), VCC-H1, CD4(done). NOT yet added, genome-wide, downloadable:
+Feng-GW-iPSC + Feng-TS-iPSC (figshare 27989294.v2), Pan-GP-H1 (GEO GSE295214), Nourreddine-iPSC
+(= KOLF, figshare+ 27261219). **Preprocessed effects + test stats for ALL 12 on HKU DataHub
+(10.25442/hku.34002315)** -- may give ready-to-use effect matrices, saving harmonize effort.
+Code: github.com/liuqiyuanhhh/perturbation-structure; preprocessing = crispyx (pypi).
+
 **Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
 (`--shrink > 0`) -- no agreement with K562 effects.
 
