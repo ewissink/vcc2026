@@ -216,6 +216,13 @@ phenomenon; the 300 PANEL perts are a selected set that all have substantial don
 there is no silent subset within the panel to down-weight. => DE-freq shared (uniform or weighted)
 improves FID but costs PDS; net below v13's PIE shared. DE-freq shelved as a lateral move.
 
+**STATE (Arc flagship) — considered, not pursued (2026-10-19):** biorxiv 2025.06.26.661135;
+SE (600M-param cell embedding) + ST (bidirectional transformer, set-level control->perturbed).
+Blocked: not installed, no GPU on BioHPC node, no task-matched CRISPRi ST checkpoint (released
+ST-Tahoe=drug, ST-Parse=diff domain; VCC baseline not located). Prior (our 18 + Ahlmann-Eltze +
+Liu/Wang): deep models don't beat simple transfer on these metrics -> low expected payoff for a
+multi-day GPU setup. Write-up point: benchmarked-by-reference, not run.
+
 **Shelved:** PCA donor denoising (16) -- monotone loss on H1 at every k. PIE per-pert signal
 (`--shrink > 0`) -- no agreement with K562 effects.
 
