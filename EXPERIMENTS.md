@@ -34,6 +34,8 @@ library; the Rest-condition DE object (19_cd4_donor.py -> cd4_rest.npz) covers 2
 v13 `pred_c_pie0.25_4donor_0.7` SCORED **0.1160 (best)** | PDS 0.440 (0.700) | MSE 0 (2.828) |
 JAC -0.004 (0.029) | NMAE 0.123 (0.926) | FID -0.035 (0.502) | REACH 0.173 (0.232). +0.007 vs v11
 -> CD4 Flex donor = ordinary donor-count gain, no platform windfall.
+v15-RW `pred_c_pie0.25_4donorRW_0.7` (reliability-weighted K562, min-weight 0.5): 0.103 | PDS 0.414
+(0.688) | MSE 0 (2.559) | NMAE 0.115 (0.930) | FID -0.071 (0.491) | REACH 0.166 (0.226). Below v13.
 Built, not submitted: pie0.15/0.35 + K562 donor 0.7 (PIE-scale refinement around 0.25).
 
 **Next ideas (not yet queued; 2/day):**
@@ -41,9 +43,19 @@ Built, not submitted: pie0.15/0.35 + K562 donor 0.7 (PIE-scale refinement around
 - swap/add X-Atlas HCT116+HEK293T donors (290/294/300 panel, far cleaner) for K562 GWPS
 - per-pert reliability-weighted donor (17) at donor 0.7
 
-### NEXT submission day -- 1 real candidate left
-Current best = v13 `pred_c_pie0.25_4donor_0.7` = 0.116. v14 (uniform DE-freq) = 0.107.
-v15 (per-pert-weighted DE-freq) DROPPED -- weighting didn't engage on the panel (= v14); not worth a slot.
+### Status: v13 is best; all levers tested
+Current best = v13 `pred_c_pie0.25_4donor_0.7` = **0.116**.
+- v14 (uniform DE-freq shared) = 0.107; v15 (per-pert-weighted DE-freq) dropped (weighting didn't
+  engage on the panel); v15-RW (reliability-weighted K562, min-weight 0.5) = **0.103** -- MSE
+  slightly better (raw 2.56) but PDS/FID/NMAE/REACH all down; reliability weighting net NEGATIVE
+  (K562 already noise-diluted by 3 co-donors, so shrinking it just removes signal).
+Levers tested: donor count (helps), platform (no windfall), shared source (PIE mean > DE-freq),
+per-pert shared weighting (inert on panel), donor reliability (negative). => v13 recipe stands.
+
+### Before 2026-10-22 final data (no more new mechanisms; confirm + squeeze)
+1. Optional quick scale sweep around v13: donor-scale {0.6,0.8}, lfc-scale {0.2,0.3} -- local optimum.
+2. Prep for final test: pipeline must run on the new A/B/C control profiles + 300 final perts;
+   keep local harness + DE-call gate for blind selection (no leaderboard Oct22-Nov5).
 
 1. **Submit v15-RW** = reliability-weighted K562 donor on the v13 recipe. Build + gate, then submit:
    build: `python scripts/09_make_cells.py --pred pred_val_full.parquet --pie-meta /workdir/emw97/pie/data/vcc2026_val/meta.json --data-dir data_dir --pert-counts data_dir/pert_counts.csv --out pred_c_pie0.25_4donorRW_0.7.h5ad --workers 32 --shrink 0 --lfc-scale 0.25 --donor '*=results/weighted/replogle_k562_gwps_rw.npz,results/harmonized/xatlas_hct116.npz,results/harmonized/xatlas_hek293t.npz,results/harmonized/cd4_rest.npz:0.7'`
