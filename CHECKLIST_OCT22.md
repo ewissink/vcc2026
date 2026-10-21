@@ -20,12 +20,23 @@ Donors are REUSED unchanged (public data). Only the contexts + perts + PIE predi
       `gene_names.csv`, `pert_counts.csv` (the 300 final perts). Match obs/var format of the val data.
 
 ## 2. Re-run PIE inference on the new contexts  (pie env -- the slow step, budget time)
-- [ ] `pie prep` controls-only on the new control cells -> new prepped dir + meta.json
-      (same command you used for vcc2026_val; set PIE_DATA_ROOT to a new vcc2026_final dir).
-- [ ] `python scripts/06_pie_gene_filter.py` if the gene set needs the PIE-text filter.
-- [ ] `python scripts/05_make_pie_query.py --pert-counts data_dir_final/pert_counts.csv --meta <new meta.json> --out query_final.json`
-- [ ] `python scripts/08_pie_infer_parallel.py --query query_final.json --out pred_final_full.parquet ...`
-      (CPU + parallel; this is the bottleneck.)
+Reconstructed from vcc2026_val meta.json (dataset=arc_vcc_25, controls_only, 18,262-gene PIE axis,
+contexts A/B/C, control_label non-targeting). Only the input h5ad + output_dir change.
+- [ ] `pie prep` controls-only on the NEW test controls (run in the pie env):
+      ```
+      pie prep dataset=arc_vcc_25 \
+        h5ad=<PATH TO FINAL TEST CONTROLS h5ad(s)>  \     # <-- the only required swap
+        genes=data_dir/gene_names_pie.csv \               # same PIE-text-filtered 18,262 genes (from 06)
+        output_dir=/workdir/emw97/pie/data/vcc2026_final \
+        controls_only=true overwrite=true
+      ```
+      -> writes meta.json + ctrl_means.npy under vcc2026_final. Check meta.json `context_to_id`
+      (the new test lines may be labelled A/B/C again or with new names -- 09 uses whatever appears).
+      Gotcha: if it errors asking for `labels=`, add a dummy/controls glob; controls_only should skip DE.
+      Only re-run `scripts/06_pie_gene_filter.py` if the gene axis changed (it shouldn't).
+- [ ] `python scripts/05_make_pie_query.py --pert-counts data_dir_final/pert_counts.csv --meta /workdir/emw97/pie/data/vcc2026_final/meta.json --out query_final.json`
+- [ ] `python scripts/08_pie_infer_parallel.py --query query_final.json --out pred_final_full.parquet --workdir pie_chunks_final --n-chunks 6 --threads 8 --pie-arg experiment_name=replogle_xdataset --pie-arg device=cpu --pie-arg "preprocessed_dirs=[/workdir/emw97/pie/data/vcc2026_final]"`
+      (CPU + parallel; this is the bottleneck. Confirm the --pie-arg list matches how you ran val.)
 
 ## 3. Build candidates + gate  (main env)
 - [ ] Edit the CONFIG block of `scripts/run_final.sh` (DATA_DIR, PRED, PIE_META paths).
