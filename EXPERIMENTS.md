@@ -59,10 +59,20 @@ Levers tested: donor count (helps), platform (no windfall), shared source (PIE m
 per-pert shared weighting (inert on panel), donor reliability (negative), per-context donor tilt
 (neutral). => **v13 LOCKED as final method.**
 
-### Before 2026-10-22 final data (no more new mechanisms; confirm + squeeze)
-1. Optional quick scale sweep around v13: donor-scale {0.6,0.8}, lfc-scale {0.2,0.3} -- local optimum.
-2. Prep for final test: pipeline must run on the new A/B/C control profiles + 300 final perts;
-   keep local harness + DE-call gate for blind selection (no leaderboard Oct22-Nov5).
+### Scale sweep (2026-10-21, last leaderboard day)
+v17 `pred_c_d0.9_l0.25` = **0.1297 (BEST)** | PDS 0.479 (0.717) | MSE 0 (3.856) | NMAE 0.126 |
+  FID -0.002 (0.512) | REACH 0.175. Donor 0.7->0.9 = +0.014 (PDS+FID up, MSE up modestly).
+v18 `pred_c_d0.7_l0.15` = 0.1177 | PDS 0.457 (0.707) | MSE 0 (2.592) | NMAE 0.132 | FID -0.041 |
+  REACH 0.164. Shared lfc 0.25->0.15 = +0.0017 (PDS/MSE up, FID/REACH down slightly).
+=> donor MAGNITUDE is the lever; PDS still rising at 0.9. Final-entry scales not yet at optimum.
+
+### FINAL ENTRY plan (blind window Oct22-Nov5, NO leaderboard -> use local harness)
+1. When final data drops: run the v17 recipe (4-donor avg, PIE shared 0.25, donor scale 0.9) on the
+   new A/B/C controls + 300 final perts.
+2. LOCAL SWEEP (15_score_local / cell-eval2 on the harness) to set scales without leaderboard:
+   donor-scale {0.9, 1.0, 1.1} x lfc-scale {0.15, 0.20, 0.25}; DE-call gate >=500/ctx (watch FID yield).
+   Pick the local-score peak. PDS was still rising at 0.9, so 1.0/1.1 may win.
+3. Confirm pipeline runs end-to-end on the new contexts before the deadline.
 
 1. **Submit v15-RW** = reliability-weighted K562 donor on the v13 recipe. Build + gate, then submit:
    build: `python scripts/09_make_cells.py --pred pred_val_full.parquet --pie-meta /workdir/emw97/pie/data/vcc2026_val/meta.json --data-dir data_dir --pert-counts data_dir/pert_counts.csv --out pred_c_pie0.25_4donorRW_0.7.h5ad --workers 32 --shrink 0 --lfc-scale 0.25 --donor '*=results/weighted/replogle_k562_gwps_rw.npz,results/harmonized/xatlas_hct116.npz,results/harmonized/xatlas_hek293t.npz,results/harmonized/cd4_rest.npz:0.7'`
