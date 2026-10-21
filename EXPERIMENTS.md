@@ -8,10 +8,12 @@ marked raw.
 
 _Last updated 2026-10-13._
 
-**Current best:** v13, overall 0.1160 -- `pred_c_pie0.25_4donor_0.7`
-(`--shrink 0 --lfc-scale 0.25 --donor '*=replogle_k562_gwps.npz,xatlas_hct116.npz,xatlas_hek293t.npz,cd4_rest.npz:0.7'`).
+**Current best:** v17 `pred_c_d0.9_l0.25` = **0.1297**
+(`--shrink 0 --lfc-scale 0.25 --donor '*=replogle_k562_gwps.npz,xatlas_hct116.npz,xatlas_hek293t.npz,cd4_rest.npz:0.9'`).
+Raising donor-scale 0.7->0.9 lifted PDS 0.440->0.479 and FID to ~0 (+0.014 overall, modest MSE cost).
+Donor magnitude optimum is >0.7 -- SWEEP HIGHER (0.9/1.0/1.1) ON THE LOCAL HARNESS for the final entry.
 Donor count is the lever (v10 1-donor 0.067 -> v12 2 0.089 -> v11 3 0.109 -> v13 4 0.116;
-diminishing returns per donor). Adding the CD4 Flex donor gave only +0.007 -> no platform-match
+diminishing per donor), and donor MAGNITUDE matters too (0.7->0.9 = +0.014). Adding the CD4 Flex donor gave only +0.007 -> no platform-match
 windfall; coverage/count drive it. Competitors report ~0.20 with 20+ donors. Next: add iPSC donors.
 
 **Scored 2026-10-14:** v9 `pred_c_d0.7` 0.0492; v10 `pred_c_pie0.25_d0.7` **0.0672** (best).
