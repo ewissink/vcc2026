@@ -49,8 +49,13 @@ Current best = v13 `pred_c_pie0.25_4donor_0.7` = **0.116**.
   engage on the panel); v15-RW (reliability-weighted K562, min-weight 0.5) = **0.103** -- MSE
   slightly better (raw 2.56) but PDS/FID/NMAE/REACH all down; reliability weighting net NEGATIVE
   (K562 already noise-diluted by 3 co-donors, so shrinking it just removes signal).
+- v16 `pred_c_pie0.25_perctx_0.7` (per-context donor tilt: A->CD4/K562 up-weighted, B&C->X-Atlas
+  up-weighted, all donors kept) = **0.1138** | PDS 0.436 (0.698) | MSE 0 (2.956) | NMAE 0.121 |
+  FID -0.034 (0.502) | REACH 0.166. TIED with v13 (within noise) -> per-context lineage tilting is
+  NEUTRAL; equal averaging is as good and simpler. Confirms similarity doesn't drive transfer.
 Levers tested: donor count (helps), platform (no windfall), shared source (PIE mean > DE-freq),
-per-pert shared weighting (inert on panel), donor reliability (negative). => v13 recipe stands.
+per-pert shared weighting (inert on panel), donor reliability (negative), per-context donor tilt
+(neutral). => **v13 LOCKED as final method.**
 
 ### Before 2026-10-22 final data (no more new mechanisms; confirm + squeeze)
 1. Optional quick scale sweep around v13: donor-scale {0.6,0.8}, lfc-scale {0.2,0.3} -- local optimum.
