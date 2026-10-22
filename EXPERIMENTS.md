@@ -66,6 +66,12 @@ v18 `pred_c_d0.7_l0.15` = 0.1177 | PDS 0.457 (0.707) | MSE 0 (2.592) | NMAE 0.13
   REACH 0.164. Shared lfc 0.25->0.15 = +0.0017 (PDS/MSE up, FID/REACH down slightly).
 => donor MAGNITUDE is the lever; PDS still rising at 0.9. Final-entry scales not yet at optimum.
 
+### FINAL DATA ARRIVED (2026-10-22) -- data_dir_final/
+Gene list IDENTICAL (18,533, same order) -> donors + v17 recipe drop in unchanged, no rebuild.
+Contexts = **D, E, F** (3 new test lines, identities unknown). 300 final perts (all unique).
+Donor coverage of final perts: K562 275, HCT116 291, HEK293T 294, CD4 283; union 298/300 -- as good
+as val. 2 perts have no donor (PIE shared only). Expect ~0.13 ballpark. Proceed with v17 + local sweep.
+
 ### FINAL ENTRY plan (blind window Oct22-Nov5, NO leaderboard -> use local harness)
 1. When final data drops: run the v17 recipe (4-donor avg, PIE shared 0.25, donor scale 0.9) on the
    new A/B/C controls + 300 final perts.
